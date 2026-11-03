@@ -14,7 +14,7 @@
 - `db.py` – SQLite storage. Default file `data/mathbuddy.db`, overridable with `MATHBUDDY_DB`.
 - `tests/` – one test file per module, e.g. `tests/test_tasks.py`
 - `docs/product-brief.md` – the BRD. Source of truth for behaviour.
-- `specs/` – numbered task specs, e.g. `specs/001-addition-test.md`
+- `specs/` – numbered task specs, e.g. `specs/001-tests.md`
 - Keep all code files in the project root. Do not create a `src/` folder.
 - All text shown in the app is in English.
 
@@ -26,7 +26,7 @@
 - Statistics, highscores and streaks are calculated from saved runs, never stored separately.
 
 ## Workflow rules
-- Never commit directly to `main`. One branch per spec, named like the spec: `001-addition-test`.
+- Never commit directly to `main`. One branch per spec, named like the spec: `001-tests`.
 - Before creating a branch: `git checkout main` and `git pull`.
 - Write tests first and wait for review before implementing.
 - Never weaken, skip or delete a reviewed test to make it pass. If a test seems
