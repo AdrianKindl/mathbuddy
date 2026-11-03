@@ -1,0 +1,15 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "mathbuddy",
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": [
+        "-NoProfile",
+        "-Command",
+        "$env:MATHBUDDY_DB='C:\\Users\\kindl\\AppData\\Local\\Temp\\claude\\f7154cb0dbcd6b8e\\02cf5ea3-0843-4074-9281-b2219f805c4e\\scratchpad\\browser-check.db'; uv run streamlit run app.py --server.headless true --server.port 8765 --browser.gatherUsageStats false"
+      ],
+      "port": 8765
+    }
+  ]
+}
