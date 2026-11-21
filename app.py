@@ -10,6 +10,7 @@ import pandas as pd
 import streamlit as st
 
 import db
+import trainer_ui
 from runs import (
     COUNTDOWN_SECONDS,
     Outcome,
@@ -147,6 +148,7 @@ def on_nav_change() -> None:
         leave_run(now)
     state.pop("result", None)
     state.phase = "select"
+    trainer_ui.leave()
 
 
 # --- Screens ---
@@ -322,6 +324,8 @@ def main() -> None:
     )
     if section == "Tests":
         render_tests()
+    elif section == "Trainer":
+        trainer_ui.render()
     else:
         render_coming_soon(section)
 

@@ -109,7 +109,7 @@ def test_tests_is_the_first_screen_and_is_built():
     assert "Coming soon" not in page_text(at)
 
 
-@pytest.mark.parametrize("section", ["Trainer", "Knowledge", "Games", "Profile"])
+@pytest.mark.parametrize("section", ["Knowledge", "Games", "Profile"])
 def test_other_sections_show_coming_soon(section):
     at = open_app()
     go_to(at, section)
@@ -200,7 +200,7 @@ def test_aborted_run_saves_nothing_and_returns_to_the_tests_screen(fast_sleep):
 
 def test_leaving_the_section_during_a_run_saves_nothing(fast_sleep):
     at = start_test(open_app())
-    go_to(at, "Trainer")
+    go_to(at, "Knowledge")
     assert "Coming soon" in page_text(at)
     go_to(at, "Tests")
 
