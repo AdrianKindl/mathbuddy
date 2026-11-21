@@ -1,5 +1,5 @@
 """Sudoku rules for Mini Sudoku (6×6, spec 002) and Sudoku (9×9, spec 002b):
-puzzle generation, entries, lives, win and loss.
+puzzle generation, entries, lives, win and loss, and the stopwatch (spec 002f).
 
 A grid is a tuple of rows of numbers; 0 marks an empty cell. The size of the
 grid (6 or 9) decides which variant's rules apply.
@@ -8,6 +8,7 @@ grid (6 or 9) decides which variant's rules apply.
 import random
 import re
 from dataclasses import dataclass, replace
+from datetime import datetime
 from enum import StrEnum
 
 from tasks import LEVELS
@@ -78,6 +79,8 @@ class Game:
     grid: Grid
     lives: int = LIVES
     status: Status = Status.RUNNING
+    started_at: datetime | None = None  # for the stopwatch (spec 002f)
+    ended_at: datetime | None = None  # when the game was won or lost
 
 
 # --- Checking grids ---
@@ -224,9 +227,12 @@ def generate_puzzle(level: str, rng: random.Random, variant: Variant = MINI) -> 
 # --- Playing ---
 
 
-def start_game(level: str, rng: random.Random, variant: Variant = MINI) -> Game:
+def start_game(
+    level: str, rng: random.Random, variant: Variant = MINI, now: datetime | None = None
+) -> Game:
+    """A new game; `now` starts its stopwatch."""
     puzzle = generate_puzzle(level, rng, variant)
-    return Game(level=level, puzzle=puzzle, grid=puzzle.givens)
+    return Game(level=level, puzzle=puzzle, grid=puzzle.givens, started_at=now)
 
 
 def parse_entry(raw: str, size: int = SIZE) -> int | None:
@@ -237,8 +243,13 @@ def parse_entry(raw: str, size: int = SIZE) -> int | None:
     return int(text)
 
 
-def enter_number(game: Game, row: int, col: int, raw: str) -> tuple[Game, Outcome]:
-    """Evaluate an entry: a correct one is locked, a wrong one costs a life."""
+def enter_number(
+    game: Game, row: int, col: int, raw: str, now: datetime | None = None
+) -> tuple[Game, Outcome]:
+    """Evaluate an entry: a correct one is locked, a wrong one costs a life.
+
+    `now` stops the stopwatch if this entry wins or loses the game.
+    """
     size = variant_of(game.grid).size
     if not (0 <= row < size and 0 <= col < size):
         raise ValueError(f"Cell outside the grid: ({row}, {col})")
@@ -252,11 +263,34 @@ def enter_number(game: Game, row: int, col: int, raw: str) -> tuple[Game, Outcom
     if value != game.puzzle.solution[row][col]:
         lives = game.lives - 1
         status = Status.LOST if lives <= 0 else Status.RUNNING
-        return replace(game, lives=lives, status=status), Outcome.WRONG
+        ended_at = now if status == Status.LOST else None
+        return replace(game, lives=lives, status=status, ended_at=ended_at), Outcome.WRONG
 
     grid = tuple(
         tuple(value if (r, c) == (row, col) else old for c, old in enumerate(cells))
         for r, cells in enumerate(game.grid)
     )
     status = Status.WON if grid == game.puzzle.solution else Status.RUNNING
-    return replace(game, grid=grid, status=status), Outcome.CORRECT
+    ended_at = now if status == Status.WON else None
+    return replace(game, grid=grid, status=status, ended_at=ended_at), Outcome.CORRECT
+
+
+# --- Stopwatch (spec 002f): it only counts, it never ends a game ---
+
+
+def elapsed_seconds(game: Game, now: datetime) -> float | None:
+    """Seconds since the start; frozen once the game is won or lost."""
+    if game.started_at is None:
+        return None
+    end = game.ended_at or now
+    return max(0.0, (end - game.started_at).total_seconds())
+
+
+def clock_text(seconds: float) -> str:
+    """Whole seconds as m:ss, or h:mm:ss from one hour on."""
+    total = int(seconds)
+    hours, rest = divmod(total, 3600)
+    minutes, secs = divmod(rest, 60)
+    if hours:
+        return f"{hours}:{minutes:02d}:{secs:02d}"
+    return f"{minutes}:{secs:02d}"

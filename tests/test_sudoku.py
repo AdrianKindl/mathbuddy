@@ -1,7 +1,8 @@
 """Mini Sudoku rules: puzzle generation, entries, lives, win and loss (spec 002)."""
 
 import random
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, replace
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -12,7 +13,9 @@ from sudoku import (
     Outcome,
     Puzzle,
     Status,
+    clock_text,
     count_solutions,
+    elapsed_seconds,
     enter_number,
     generate_puzzle,
     is_solved_grid,
@@ -421,3 +424,74 @@ def test_full_generated_9x9_game_can_be_won():
         assert outcome == Outcome.CORRECT
     assert game.status == Status.WON
     assert game.lives == 3
+
+
+# --- Stopwatch (spec 002f) ---
+
+T0 = datetime(2026, 11, 21, 12, 0, 0, tzinfo=timezone.utc)
+
+
+def at(seconds):
+    return T0 + timedelta(seconds=seconds)
+
+
+def timed_game(lives=3):
+    return replace(known_game(lives=lives), started_at=T0)
+
+
+def test_start_game_starts_the_stopwatch():
+    game = start_game("Easy", random.Random(1), now=T0)
+    assert game.started_at == T0
+    assert game.ended_at is None
+    assert elapsed_seconds(game, at(65)) == 65
+
+
+def test_game_without_a_start_time_has_no_stopwatch():
+    assert elapsed_seconds(known_game(), at(10)) is None
+    assert start_game("Easy", random.Random(1)).started_at is None
+
+
+def test_stopwatch_stops_at_the_winning_entry():
+    game = timed_game()
+    for k, (r, c) in enumerate(EMPTY):
+        game, _ = enter_number(game, r, c, str(SOLUTION[r][c]), now=at(30 + k))
+    assert game.status == Status.WON
+    assert game.ended_at == at(32)
+    assert elapsed_seconds(game, at(500)) == 32
+
+
+def test_stopwatch_stops_at_the_losing_entry():
+    game = timed_game(lives=1)
+    game, _ = enter_number(game, 0, 0, "6", now=at(47))
+    assert game.status == Status.LOST
+    assert elapsed_seconds(game, at(999)) == 47
+
+
+def test_stopwatch_keeps_running_while_the_game_runs():
+    game, _ = enter_number(timed_game(), 0, 0, "1", now=at(10))
+    game, _ = enter_number(game, 0, 0, "4", now=at(11))  # locked cell: ignored
+    game, _ = enter_number(game, 2, 3, "4", now=at(12))  # wrong: a life, no stop
+    assert game.ended_at is None
+    assert elapsed_seconds(game, at(90)) == 90
+
+
+def test_stopwatch_never_affects_the_game():
+    untimed, _ = enter_number(known_game(), 0, 0, "1")
+    timed, _ = enter_number(timed_game(), 0, 0, "1", now=at(3600))
+    assert (timed.grid, timed.lives, timed.status) == (untimed.grid, untimed.lives, untimed.status)
+
+
+def test_stopwatch_works_on_9x9():
+    game = start_game("Easy", random.Random(2), sudoku.CLASSIC, now=T0)
+    for k, (r, c) in enumerate(empty_cells(game.grid)):
+        game, _ = enter_number(game, r, c, str(game.puzzle.solution[r][c]), now=at(k))
+    assert game.status == Status.WON
+    assert elapsed_seconds(game, at(10_000)) == sudoku.CLASSIC.empty_cells["Easy"] - 1
+
+
+@pytest.mark.parametrize(
+    "seconds, text",
+    [(0, "0:00"), (9.9, "0:09"), (65, "1:05"), (600, "10:00"), (3599, "59:59"), (3725, "1:02:05")],
+)
+def test_clock_text(seconds, text):
+    assert clock_text(seconds) == text

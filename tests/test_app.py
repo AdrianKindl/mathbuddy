@@ -6,6 +6,7 @@ flash, cursor focus, the field clearing after submit, cancelling during the
 countdown, and a real Ctrl+C restart.
 """
 
+import re
 import time
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
@@ -806,3 +807,29 @@ def test_three_wrong_chain_results_show_game_over(fast_sleep):
         answer_chain(at, str(result + 1))
     assert "Game over" in page_text(at)
     assert "You solved 0 chains" in page_text(at)
+
+
+# --- Games: Sudoku stopwatch (spec 002f) ---
+
+CLOCK = re.compile(r"\d+:\d\d(:\d\d)?")
+
+
+def test_new_mini_sudoku_shows_a_running_clock():
+    at = start_game()
+    assert CLOCK.fullmatch(metrics(at)["Time"])
+    assert at.session_state["game"].started_at is not None
+
+
+def test_new_sudoku_shows_a_running_clock():
+    at = start_sudoku()
+    assert CLOCK.fullmatch(metrics(at)["Time"])
+
+
+def test_solved_sudoku_shows_the_final_time():
+    at = start_game()
+    for _ in range(EMPTY_CELLS["Easy"]):
+        row, col, right = first_empty_cell(at)
+        enter(at, row, col, str(right))
+    assert "You solved it!" in page_text(at)
+    assert at.session_state["game"].ended_at is not None
+    assert CLOCK.fullmatch(metrics(at)["Time"])
