@@ -10,6 +10,7 @@ import pandas as pd
 import streamlit as st
 
 import db
+import trainer_ui
 import sudoku
 from runs import (
     COUNTDOWN_SECONDS,
@@ -150,6 +151,7 @@ def on_nav_change() -> None:
         leave_run(now)
     state.pop("result", None)
     state.phase = "select"
+    trainer_ui.leave()
 
 
 # --- Games: Mini Sudoku ---
@@ -486,6 +488,8 @@ def main() -> None:
     )
     if section == "Tests":
         render_tests()
+    elif section == "Trainer":
+        trainer_ui.render()
     elif section == "Games":
         render_games()
     else:
