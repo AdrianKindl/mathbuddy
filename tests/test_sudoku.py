@@ -307,3 +307,117 @@ def test_rule_module_has_no_streamlit_sql_clock_or_own_randomness():
     source = (Path(__file__).resolve().parent.parent / "sudoku.py").read_text()
     for forbidden in ("streamlit", "sqlite", "SELECT", "datetime.now", "random.Random(", "time.time"):
         assert forbidden not in source, forbidden
+
+
+# --- Sudoku 9×9 (spec 002b) ---
+
+# A complete, valid 9×9 grid built from the classic shifting pattern.
+SOLUTION_9 = tuple(
+    tuple((r * 3 + r // 3 + c) % 9 + 1 for c in range(9)) for r in range(9)
+)
+EMPTY_9 = ((0, 0), (4, 4), (8, 8))
+
+
+def known_game_9(lives=3):
+    givens = with_cells(SOLUTION_9, {cell: 0 for cell in EMPTY_9})
+    return Game(level="Easy", puzzle=Puzzle(givens=givens, solution=SOLUTION_9), grid=givens, lives=lives)
+
+
+def test_classic_variant_matches_the_brief():
+    assert sudoku.CLASSIC.size == 9
+    assert (sudoku.CLASSIC.box_rows, sudoku.CLASSIC.box_cols) == (3, 3)
+    assert sudoku.CLASSIC.empty_cells == {"Easy": 36, "Medium": 42, "Hard": 48, "Pro": 52}
+    assert list(sudoku.CLASSIC.empty_cells) == list(LEVELS)
+
+
+def test_mini_is_still_the_default_variant():
+    assert sudoku.MINI.size == 6
+    assert len(generate_puzzle("Easy", random.Random(1)).givens) == 6
+
+
+def test_known_9x9_solution_is_a_solved_grid():
+    assert is_solved_grid(SOLUTION_9)
+    assert count_solutions(SOLUTION_9) == 1
+
+
+def test_9x9_duplicate_in_a_box_is_not_solved():
+    # Every row and column is a valid 1–9, but the 3×3 boxes are not.
+    rows_shifted_by_one = tuple(tuple((r + c) % 9 + 1 for c in range(9)) for r in range(9))
+    assert not is_solved_grid(rows_shifted_by_one)
+
+
+@pytest.mark.parametrize("size", [4, 5, 7, 8])
+def test_grids_of_other_sizes_are_rejected(size):
+    with pytest.raises(ValueError):
+        is_solved_grid(tuple((0,) * size for _ in range(size)))
+
+
+def test_ragged_grids_are_rejected():
+    with pytest.raises(ValueError):
+        count_solutions(SOLUTION[:5] + ((1, 2, 3),))
+
+
+@pytest.mark.parametrize("level", LEVELS)
+def test_generated_9x9_puzzles_follow_the_rules(level):
+    for seed in range(10):
+        puzzle = generate_puzzle(level, random.Random(seed), sudoku.CLASSIC)
+        assert len(puzzle.solution) == 9
+        assert is_solved_grid(puzzle.solution), (level, seed)
+        for r in range(9):
+            for c in range(9):
+                assert puzzle.givens[r][c] in (0, puzzle.solution[r][c]), (level, seed, r, c)
+        assert len(empty_cells(puzzle.givens)) == sudoku.CLASSIC.empty_cells[level], (level, seed)
+        assert count_solutions(puzzle.givens) == 1, (level, seed)
+
+
+def test_new_9x9_game_starts_with_three_lives():
+    game = start_game("Pro", random.Random(5), sudoku.CLASSIC)
+    assert game.lives == 3
+    assert game.status == Status.RUNNING
+    assert len(game.grid) == 9
+    assert len(empty_cells(game.grid)) == 52
+
+
+def test_9x9_accepts_nine_as_an_entry():
+    game, outcome = enter_number(known_game_9(), 0, 0, "1")
+    assert outcome == Outcome.CORRECT
+    game, outcome = enter_number(game, 8, 8, str(SOLUTION_9[8][8]))
+    assert outcome == Outcome.CORRECT
+
+
+@pytest.mark.parametrize("raw", ["7", "8", "9"])
+def test_7_8_and_9_are_evaluated_on_9x9(raw):
+    # (0, 0) needs a 1, so 7, 8 and 9 are wrong entries there, not ignored ones.
+    game, outcome = enter_number(known_game_9(), 0, 0, raw)
+    assert outcome == Outcome.WRONG
+    assert game.lives == 2
+
+
+@pytest.mark.parametrize("raw", ["0", "10", "", "x"])
+def test_invalid_9x9_entries_change_nothing(raw):
+    before = known_game_9()
+    game, outcome = enter_number(before, 0, 0, raw)
+    assert outcome == Outcome.IGNORED
+    assert game == before
+
+
+@pytest.mark.parametrize("row, col", [(9, 0), (0, 9)])
+def test_cells_outside_the_9x9_grid_are_rejected(row, col):
+    with pytest.raises(ValueError):
+        enter_number(known_game_9(), row, col, "1")
+
+
+def test_three_wrong_9x9_entries_lose_the_game():
+    game = known_game_9()
+    for _ in range(3):
+        game, _ = enter_number(game, 4, 4, "9" if SOLUTION_9[4][4] != 9 else "1")
+    assert game.status == Status.LOST
+
+
+def test_full_generated_9x9_game_can_be_won():
+    game = start_game("Hard", random.Random(2), sudoku.CLASSIC)
+    for r, c in empty_cells(game.grid):
+        game, outcome = enter_number(game, r, c, str(game.puzzle.solution[r][c]))
+        assert outcome == Outcome.CORRECT
+    assert game.status == Status.WON
+    assert game.lives == 3

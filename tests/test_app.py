@@ -556,3 +556,71 @@ def test_a_new_game_starts_fresh_after_game_over():
     at.button(key="new_game").click().run()
     assert metrics(at)["Lives"] == "3"
     assert len(cell_keys(at)) == EMPTY_CELLS["Easy"]
+
+
+# --- Games: Sudoku 9×9 (spec 002b) ---
+
+SUDOKU_EMPTY_CELLS = {"Easy": 36, "Medium": 42, "Hard": 48, "Pro": 52}
+
+
+def start_sudoku(level="Easy"):
+    at = open_app()
+    go_to(at, "Games")
+    at.selectbox(key="game_choice").set_value("Sudoku").run()
+    assert not at.exception
+    at.selectbox(key="game_level").set_value(level)
+    at.button(key="new_game").click().run()
+    assert not at.exception
+    return at
+
+
+def test_games_picker_offers_both_sudokus():
+    at = open_app()
+    go_to(at, "Games")
+    assert list(at.selectbox(key="game_choice").options)[:2] == ["Mini Sudoku", "Sudoku"]
+    assert at.selectbox(key="game_choice").value == "Mini Sudoku"
+
+
+@pytest.mark.parametrize("level", LEVELS)
+def test_new_sudoku_shows_one_input_per_empty_cell_and_three_lives(level):
+    at = start_sudoku(level)
+    assert len(at.session_state["game"].grid) == 9
+    assert len(cell_keys(at)) == SUDOKU_EMPTY_CELLS[level]
+    assert metrics(at)["Lives"] == "3"
+
+
+def test_sudoku_correct_entry_locks_the_cell():
+    at = start_sudoku()
+    row, col, right = first_empty_cell(at)
+    enter(at, row, col, str(right))
+    assert f"cell_{row}_{col}" not in cell_keys(at)
+    assert metrics(at)["Lives"] == "3"
+
+
+def test_sudoku_accepts_a_nine():
+    at = start_sudoku()
+    game = at.session_state["game"]
+    row, col = next(
+        (r, c) for r in range(9) for c in range(9)
+        if game.grid[r][c] == 0 and game.puzzle.solution[r][c] == 9
+    )
+    enter(at, row, col, "9")
+    assert f"cell_{row}_{col}" not in cell_keys(at)
+    assert metrics(at)["Lives"] == "3"
+
+
+def test_sudoku_three_wrong_entries_show_game_over():
+    at = start_sudoku()
+    row, col, right = first_empty_cell(at)
+    for _ in range(3):
+        enter(at, row, col, str(right % 9 + 1))
+    assert "Game over" in page_text(at)
+    assert not cell_keys(at)
+
+
+def test_changing_the_game_ends_the_current_one():
+    at = start_sudoku()
+    at.selectbox(key="game_choice").set_value("Mini Sudoku").run()
+    assert not at.exception
+    assert "game" not in at.session_state
+    assert not cell_keys(at)
