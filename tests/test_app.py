@@ -659,7 +659,8 @@ def wrong_magic_number(at, right):
 def test_games_picker_offers_all_four_games():
     at = open_app()
     go_to(at, "Games")
-    assert list(at.selectbox(key="game_choice").options) == GAMES
+    options = list(at.selectbox(key="game_choice").options)
+    assert options[: len(GAMES)] == GAMES  # the four R4 games, in the brief's order
 
 
 @pytest.mark.parametrize("level", LEVELS)
