@@ -209,6 +209,19 @@ def clear_game() -> None:
     state.hunt_pick = {"first": None, "op": None}
 
 
+def on_end_game() -> None:
+    """Like "End training" in the Trainer: the game ends and nothing is saved (spec 002g)."""
+    clear_game()
+
+
+def current_game():
+    """The game that is shown, whichever kind it is, or None."""
+    for key in ("hunt", "magic", "chain", "game"):
+        if key in state:
+            return state[key]
+    return None
+
+
 def on_game_change() -> None:
     clear_game()  # nothing is saved, so the old game simply ends
 
@@ -1002,6 +1015,11 @@ def render_games() -> None:
         render_chain(state.chain)
     elif "game" in state:
         render_sudoku(state.game)
+
+    # Every game's Status has RUNNING = "running"; compared by value, as in runs.py.
+    game = current_game()
+    if game is not None and game.status == "running":
+        st.button("End game", key="end_game", on_click=on_end_game)
 
 
 def main() -> None:

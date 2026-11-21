@@ -950,3 +950,83 @@ def test_solved_sudoku_shows_the_final_time():
     assert "You solved it!" in page_text(at)
     assert at.session_state["game"].ended_at is not None
     assert CLOCK.fullmatch(metrics(at)["Time"])
+
+
+# --- Games: End game (spec 002g) ---
+
+GAME_STATE_KEYS = {
+    "Mini Sudoku": "game",
+    "Sudoku": "game",
+    "Number Hunt": "hunt",
+    "Magic Square": "magic",
+    "Number Chain": "chain",
+}
+
+
+def start_any_game(choice):
+    at = open_app()
+    go_to(at, "Games")
+    at.selectbox(key="game_choice").set_value(choice).run()
+    assert not at.exception
+    at.button(key="new_game").click().run()
+    assert not at.exception
+    return at
+
+
+def has_end_button(at):
+    return any(button.key == "end_game" for button in at.button)
+
+
+@pytest.mark.parametrize("choice", list(GAME_STATE_KEYS))
+def test_running_game_can_be_ended(choice):
+    at = start_any_game(choice)
+    assert GAME_STATE_KEYS[choice] in at.session_state
+    assert has_end_button(at)
+    assert at.button(key="end_game").label == "End game"
+
+    at.button(key="end_game").click().run()
+    assert not at.exception
+    assert GAME_STATE_KEYS[choice] not in at.session_state
+    assert not cell_keys(at)
+    assert not magic_cell_keys(at)
+    assert not has_end_button(at)
+    assert any(button.key == "new_game" for button in at.button)
+
+
+def test_new_game_after_ending_starts_fresh():
+    at = start_any_game("Mini Sudoku")
+    row, col, right = first_empty_cell(at)
+    enter(at, row, col, str(right % 6 + 1))  # lose a life first
+    at.button(key="end_game").click().run()
+    at.button(key="new_game").click().run()
+    assert not at.exception
+    assert metrics(at)["Lives"] == "3"
+    assert len(cell_keys(at)) == EMPTY_CELLS["Easy"]
+    assert has_end_button(at)
+
+
+def test_lost_game_has_no_end_button():
+    at = start_game()
+    row, col, right = first_empty_cell(at)
+    for _ in range(3):
+        enter(at, row, col, wrong_digit(right))
+    assert "Game over" in page_text(at)
+    assert not has_end_button(at)
+
+
+def test_solved_game_has_no_end_button():
+    at = start_game()
+    for _ in range(EMPTY_CELLS["Easy"]):
+        row, col, right = first_empty_cell(at)
+        enter(at, row, col, str(right))
+    assert "You solved it!" in page_text(at)
+    assert not has_end_button(at)
+
+
+def test_number_chain_can_be_ended_while_answering(fast_sleep):
+    at = start_chain_game()
+    show_chain(at)
+    assert at.session_state["chain_phase"] == "answer"
+    at.button(key="end_game").click().run()
+    assert not at.exception
+    assert "chain" not in at.session_state
