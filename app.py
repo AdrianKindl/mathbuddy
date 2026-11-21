@@ -10,6 +10,7 @@ import pandas as pd
 import streamlit as st
 
 import db
+import sudoku
 from runs import (
     COUNTDOWN_SECONDS,
     Outcome,
@@ -34,6 +35,8 @@ NO_VALUE = "–"
 IGNORED_HINT = "Numbers only, e.g. 4250"
 FLASH_COLORS = {"green": "rgb(22, 163, 74)", "red": "rgb(220, 38, 38)"}
 FLASH_MS = 700
+OTHER_GAMES = ["Sudoku", "Number Hunt", "Magic Square"]
+GAME_HINT = "Numbers 1–6 only"
 
 state = st.session_state
 
@@ -147,6 +150,32 @@ def on_nav_change() -> None:
         leave_run(now)
     state.pop("result", None)
     state.phase = "select"
+
+
+# --- Games: Mini Sudoku ---
+
+
+def cell_key(row: int, col: int) -> str:
+    return f"cell_{row}_{col}"
+
+
+def on_new_game() -> None:
+    for key in [key for key in state if str(key).startswith("cell_")]:
+        del state[key]  # no old entries in the fresh grid's fields
+    state.game = sudoku.start_game(state.game_level, random.Random())
+    state.game_flash = None
+    state.game_hint = False
+
+
+def on_cell(row: int, col: int) -> None:
+    key = cell_key(row, col)
+    raw = state[key]
+    game, outcome = sudoku.enter_number(state.game, row, col, raw)
+    state.game = game
+    state[key] = ""  # a wrong or invalid entry leaves the field empty again
+    state.game_attempt = state.get("game_attempt", 0) + 1
+    state.game_flash = (row, col) if outcome == sudoku.Outcome.WRONG else None
+    state.game_hint = outcome == sudoku.Outcome.IGNORED and raw.strip() != ""
 
 
 # --- Screens ---
@@ -306,6 +335,141 @@ def render_tests() -> None:
         render_select()
 
 
+SUDOKU_CSS = """<style>
+.st-key-sudoku_grid { gap: 0.35rem; max-width: 24rem; }
+.st-key-sudoku_grid [data-testid="stHorizontalBlock"] {
+    flex-wrap: nowrap !important;
+    gap: 0.35rem;
+}
+.st-key-sudoku_grid [data-testid="stColumn"] {
+    min-width: 0 !important;
+    width: auto !important;
+    flex: 1 1 0 !important;
+}
+/* Extra space between the 2×3 boxes: before column 4 and before rows 3 and 5. */
+.st-key-sudoku_grid [data-testid="stColumn"]:nth-child(4) { margin-left: 0.6rem; }
+.st-key-sudoku_row_2, .st-key-sudoku_row_4 { margin-top: 0.6rem; }
+.st-key-sudoku_grid [data-testid="stTextInputRootElement"] {
+    background: transparent;
+    border: 2px solid rgba(128, 128, 128, 0.4);
+    border-radius: 0.5rem;
+}
+.st-key-sudoku_grid input {
+    background: transparent;
+    text-align: center;
+    font-size: 1.15rem;
+    font-weight: 600;
+    padding: 0;
+}
+.sudoku-cell {
+    height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    font-size: 1.15rem;
+    font-weight: 600;
+}
+.sudoku-given { background: rgba(128, 128, 128, 0.18); }
+.sudoku-correct { background: rgb(22, 163, 74); color: white; }
+.sudoku-missed { border: 2px dashed rgb(220, 38, 38); color: rgb(220, 38, 38); }
+</style>"""
+
+
+def render_game_flash() -> None:
+    cell = state.get("game_flash")
+    if cell is None:
+        return
+    name = f"game-flash-{state.game_attempt}"
+    red = FLASH_COLORS["red"]
+    st.html(
+        f"""<style>
+        @keyframes {name} {{
+            0%, 60% {{
+                background-color: {red};
+                border-color: {red};
+                box-shadow: 0 0 0 3px {red}, 0 0 14px 4px {red};
+            }}
+        }}
+        .st-key-{cell_key(*cell)} [data-testid="stTextInputRootElement"] {{
+            animation: {name} {FLASH_MS}ms ease-out;
+        }}
+        </style>"""
+    )
+
+
+def render_cell(column, game: sudoku.Game, row: int, col: int) -> None:
+    given = game.puzzle.givens[row][col]
+    value = game.grid[row][col]
+    if given:
+        kind, text = "given", given
+    elif value:
+        kind, text = "correct", value
+    elif game.status != sudoku.Status.RUNNING:
+        kind, text = "missed", game.puzzle.solution[row][col]
+    else:
+        column.text_input(
+            f"Row {row + 1}, column {col + 1}",
+            key=cell_key(row, col),
+            max_chars=1,
+            autocomplete="off",
+            label_visibility="collapsed",
+            on_change=on_cell,
+            args=(row, col),
+        )
+        return
+    column.html(f'<div class="sudoku-cell sudoku-{kind}">{text}</div>')
+
+
+def render_sudoku(game: sudoku.Game) -> None:
+    hearts = "❤️" * game.lives + "🤍" * (sudoku.LIVES - game.lives)
+    st.metric("Lives", game.lives)
+    st.caption(hearts)
+
+    if game.status == sudoku.Status.WON:
+        st.success("You solved it!")
+    elif game.status == sudoku.Status.LOST:
+        st.markdown(
+            "### :red[Game over]\nNo lives left. The missing numbers are shown in red."
+        )
+    elif state.get("game_hint"):
+        st.warning(GAME_HINT)
+
+    st.html(SUDOKU_CSS)
+    with st.container(key="sudoku_grid"):
+        for row in range(sudoku.SIZE):
+            with st.container(key=f"sudoku_row_{row}"):
+                columns = st.columns(sudoku.SIZE, gap=None)
+                for col in range(sudoku.SIZE):
+                    render_cell(columns[col], game, row, col)
+    render_game_flash()
+
+
+def render_games() -> None:
+    st.header("Games", anchor=False)
+    st.subheader("Mini Sudoku", anchor=False)
+    st.caption(f"Coming soon: {', '.join(OTHER_GAMES)}")
+    st.markdown(
+        "Fill the grid with the numbers 1–6 so that each number appears once in every "
+        "row, every column and every 2×3 box. A wrong number costs one of your 3 lives."
+    )
+
+    level_column, button_column = st.columns([2, 1], vertical_alignment="bottom")
+    game = state.get("game")
+    level_column.selectbox(
+        "Level",
+        LEVELS,
+        index=LEVELS.index(game.level if game else LEVELS[0]),
+        key="game_level",
+    )
+    button_column.button(
+        "New game", key="new_game", type="primary", on_click=on_new_game, width="stretch"
+    )
+
+    if game is not None:
+        render_sudoku(game)
+
+
 def main() -> None:
     st.set_page_config(page_title="Mathbuddy")
     if "phase" not in state:  # once per session, so reruns during a test stay fast
@@ -322,6 +486,8 @@ def main() -> None:
     )
     if section == "Tests":
         render_tests()
+    elif section == "Games":
+        render_games()
     else:
         render_coming_soon(section)
 
