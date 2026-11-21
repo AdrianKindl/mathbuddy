@@ -507,3 +507,107 @@ def test_changing_the_game_ends_the_current_one():
     assert not at.exception
     assert "game" not in at.session_state
     assert not cell_keys(at)
+
+
+# --- Games: Number Hunt (spec 002c) ---
+
+
+def start_hunt(level="Easy"):
+    at = open_app()
+    go_to(at, "Games")
+    at.selectbox(key="game_choice").set_value("Number Hunt").run()
+    assert not at.exception
+    at.selectbox(key="game_level").set_value(level)
+    at.button(key="new_game").click().run()
+    assert not at.exception
+    return at
+
+
+HUNT_OP_KEYS = {"+": "plus", "−": "minus", "×": "times", "÷": "divide"}
+
+
+def hunt_step(at, first, op, second):
+    """Tap number, operation, number, by their positions in the current numbers."""
+    at.button(key=f"hunt_num_{first}").click().run()
+    at.button(key=f"hunt_op_{HUNT_OP_KEYS[op]}").click().run()
+    at.button(key=f"hunt_num_{second}").click().run()
+    assert not at.exception
+
+
+def play_hunt_step(at, step):
+    numbers = at.session_state["hunt"].numbers
+    first = numbers.index(step.a)
+    second = next(k for k, n in enumerate(numbers) if n == step.b and k != first)
+    hunt_step(at, first, step.op, second)
+
+
+def invalid_hunt_step(at):
+    """Positions of a step that is never allowed: the smaller number minus the larger."""
+    numbers = at.session_state["hunt"].numbers
+    small = min(range(len(numbers)), key=lambda k: numbers[k])
+    large = next(k for k in range(len(numbers)) if k != small and numbers[k] >= numbers[small])
+    return small, "−", large
+
+
+def test_games_picker_offers_number_hunt():
+    at = open_app()
+    go_to(at, "Games")
+    assert "Number Hunt" in at.selectbox(key="game_choice").options
+
+
+@pytest.mark.parametrize("level, count", [("Easy", 3), ("Medium", 4), ("Hard", 5), ("Pro", 6)])
+def test_new_hunt_shows_target_numbers_and_three_lives(level, count):
+    at = start_hunt(level)
+    game = at.session_state["hunt"]
+    assert metrics(at)["Target"] == str(game.puzzle.target)
+    assert metrics(at)["Lives"] == "3"
+    labels = [at.button(key=f"hunt_num_{k}").label for k in range(count)]
+    assert labels == [str(n) for n in game.puzzle.numbers]
+
+
+def test_valid_hunt_step_is_shown_and_keeps_the_lives():
+    at = start_hunt()
+    step = at.session_state["hunt"].puzzle.solution[0]
+    play_hunt_step(at, step)
+    game = at.session_state["hunt"]
+    assert game.steps == (step,)
+    assert len(game.numbers) == 2
+    assert metrics(at)["Lives"] == "3"
+
+
+def test_invalid_hunt_step_lowers_the_lives():
+    at = start_hunt()
+    hunt_step(at, *invalid_hunt_step(at))
+    assert metrics(at)["Lives"] == "2"
+    assert at.session_state["hunt"].steps == ()
+
+
+def test_hunt_undo_costs_a_life():
+    at = start_hunt()
+    play_hunt_step(at, at.session_state["hunt"].puzzle.solution[0])
+    at.button(key="hunt_undo").click().run()
+    assert not at.exception
+    assert metrics(at)["Lives"] == "2"
+    assert at.session_state["hunt"].steps == ()
+
+
+def test_playing_the_solution_shows_you_found_it():
+    at = start_hunt("Medium")
+    for step in at.session_state["hunt"].puzzle.solution:
+        play_hunt_step(at, step)
+    assert "You found it!" in page_text(at)
+    assert metrics(at)["Lives"] == "3"
+
+
+def test_three_invalid_hunt_steps_show_game_over():
+    at = start_hunt()
+    for _ in range(3):
+        hunt_step(at, *invalid_hunt_step(at))
+    assert "Game over" in page_text(at)
+
+
+def test_changing_the_game_ends_the_hunt():
+    at = start_hunt()
+    at.selectbox(key="game_choice").set_value("Sudoku").run()
+    assert not at.exception
+    assert "hunt" not in at.session_state

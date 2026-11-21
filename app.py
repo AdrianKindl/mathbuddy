@@ -10,6 +10,7 @@ import pandas as pd
 import streamlit as st
 
 import db
+import numberhunt
 import sudoku
 from runs import (
     COUNTDOWN_SECONDS,
@@ -37,8 +38,9 @@ FLASH_COLORS = {"green": "rgb(22, 163, 74)", "red": "rgb(220, 38, 38)"}
 FLASH_MS = 700
 LIVES = sudoku.LIVES
 SUDOKU_VARIANTS = {"Mini Sudoku": sudoku.MINI, "Sudoku": sudoku.CLASSIC}
-GAMES = list(SUDOKU_VARIANTS)
-COMING_SOON_GAMES = ["Number Hunt", "Magic Square"]
+GAMES = [*SUDOKU_VARIANTS, "Number Hunt"]
+COMING_SOON_GAMES = ["Magic Square"]
+HUNT_OPERATIONS = {"plus": "+", "minus": "−", "times": "×", "divide": "÷"}
 GAME_RULES = {
     "Mini Sudoku": (
         "Fill the grid with the numbers 1–6 so that each number appears once in every "
@@ -48,6 +50,12 @@ GAME_RULES = {
         "Fill the grid with the numbers 1–9 so that each number appears once in every "
         "row, every column and every 3×3 box. A wrong number costs one of your 3 lives. "
         "Take your time: there is no timer."
+    ),
+    "Number Hunt": (
+        "Reach the target: tap a number, an operation, then a second number. The two "
+        "numbers are replaced by their result. You win when the last number left is the "
+        "target. Results must be whole numbers above 0, and × or ÷ by 1 is not allowed. "
+        "A step that breaks these rules, Undo and Reset each cost one of your 3 lives."
     ),
 }
 
@@ -175,9 +183,11 @@ def cell_key(row: int, col: int) -> str:
 def clear_game() -> None:
     for key in [key for key in state if str(key).startswith("cell_")]:
         del state[key]  # no old entries in the next grid's fields
-    state.pop("game", None)
+    for name in ("game", "hunt", "hunt_message"):
+        state.pop(name, None)
     state.game_flash = None
     state.game_hint = False
+    state.hunt_pick = {"first": None, "op": None}
 
 
 def on_game_change() -> None:
@@ -186,8 +196,12 @@ def on_game_change() -> None:
 
 def on_new_game() -> None:
     clear_game()
-    variant = SUDOKU_VARIANTS[state.get("game_choice", GAMES[0])]
-    state.game = sudoku.start_game(state.game_level, random.Random(), variant)
+    choice = state.get("game_choice", GAMES[0])
+    if choice == "Number Hunt":
+        state.hunt = numberhunt.start_game(state.game_level, random.Random())
+    else:
+        variant = SUDOKU_VARIANTS[choice]
+        state.game = sudoku.start_game(state.game_level, random.Random(), variant)
 
 
 def on_cell(row: int, col: int) -> None:
@@ -199,6 +213,44 @@ def on_cell(row: int, col: int) -> None:
     state.game_attempt = state.get("game_attempt", 0) + 1
     state.game_flash = (row, col) if outcome == sudoku.Outcome.WRONG else None
     state.game_hint = outcome == sudoku.Outcome.IGNORED and raw.strip() != ""
+
+
+def hunt_after(game: numberhunt.Game, outcome: numberhunt.Outcome, message: str | None) -> None:
+    state.hunt = game
+    state.hunt_pick = {"first": None, "op": None}
+    state.game_attempt = state.get("game_attempt", 0) + 1
+    state.game_flash = "hunt" if outcome == numberhunt.Outcome.WRONG else None
+    state.hunt_message = message
+
+
+def on_hunt_number(position: int) -> None:
+    pick = state.hunt_pick
+    if pick["first"] is None or pick["op"] is None:
+        # Tapping the chosen number again unselects it; another number replaces it.
+        pick["first"] = None if pick["first"] == position else position
+        return
+    if position == pick["first"]:
+        return
+    game = state.hunt
+    a, op, b = game.numbers[pick["first"]], pick["op"], game.numbers[position]
+    game, outcome = numberhunt.apply_step(game, pick["first"], op, position)
+    message = None
+    if outcome == numberhunt.Outcome.WRONG:
+        message = f"{a} {op} {b} is not allowed. It cost a life."
+    hunt_after(game, outcome, message)
+
+
+def on_hunt_operation(op: str) -> None:
+    if state.hunt_pick["first"] is not None:
+        state.hunt_pick["op"] = op
+
+
+def on_hunt_undo() -> None:
+    hunt_after(*numberhunt.undo(state.hunt), None)
+
+
+def on_hunt_reset() -> None:
+    hunt_after(*numberhunt.reset(state.hunt), None)
 
 
 # --- Screens ---
@@ -498,15 +550,154 @@ def render_sudoku(game: sudoku.Game) -> None:
     render_game_flash()
 
 
+HUNT_CSS = """<style>
+.hunt-target {
+    font-size: 2.6rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+.hunt-steps { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.hunt-step {
+    background: rgb(22, 163, 74);
+    color: white;
+    border-radius: 0.5rem;
+    padding: 0.25rem 0.6rem;
+    font-weight: 600;
+}
+.st-key-hunt_header [data-testid="stHorizontalBlock"],
+.st-key-hunt_numbers [data-testid="stHorizontalBlock"],
+.st-key-hunt_operations [data-testid="stHorizontalBlock"] {
+    flex-wrap: nowrap !important;
+    gap: 0.4rem;
+}
+.st-key-hunt_header [data-testid="stColumn"],
+.st-key-hunt_numbers [data-testid="stColumn"],
+.st-key-hunt_operations [data-testid="stColumn"] {
+    min-width: 0 !important;
+    width: auto !important;
+    flex: 1 1 0 !important;
+}
+.st-key-hunt_numbers button, .st-key-hunt_operations button {
+    padding-left: 0;
+    padding-right: 0;
+    min-height: 3rem;
+}
+.st-key-hunt_numbers button p, .st-key-hunt_operations button p {
+    font-size: 1.35rem;
+    font-weight: 700;
+}
+/* The chosen number and operation are blue: red means a wrong step. */
+.st-key-hunt_numbers button[kind="primary"],
+.st-key-hunt_operations button[kind="primary"] {
+    background: rgb(37, 99, 235);
+    border-color: rgb(37, 99, 235);
+    color: white;
+}
+.st-key-hunt_numbers { border-radius: 0.6rem; }
+</style>"""
+
+
+def render_hunt_flash() -> None:
+    if state.get("game_flash") != "hunt":
+        return
+    name = f"hunt-flash-{state.game_attempt}"
+    red = FLASH_COLORS["red"]
+    st.html(
+        f"""<style>
+        @keyframes {name} {{
+            0%, 60% {{ box-shadow: 0 0 0 3px {red}, 0 0 18px 6px {red}; }}
+        }}
+        .st-key-hunt_numbers {{ animation: {name} {FLASH_MS}ms ease-out; }}
+        </style>"""
+    )
+
+
+def render_hunt(game: numberhunt.Game) -> None:
+    st.html(HUNT_CSS)
+    with st.container(key="hunt_header"):
+        target_column, lives_column = st.columns(2)
+        with target_column:
+            st.metric("Target", game.puzzle.target)
+        with lives_column:
+            render_lives(game.lives)
+
+    running = game.status == numberhunt.Status.RUNNING
+    if game.status == numberhunt.Status.WON:
+        st.success("You found it!")
+    elif game.status == numberhunt.Status.LOST:
+        st.markdown("### :red[Game over]\nNo lives left. One way to reach the target:")
+        st.markdown("  \n".join(step.text for step in game.puzzle.solution))
+    elif state.get("hunt_message"):
+        st.warning(state.hunt_message)
+    elif numberhunt.is_stuck(game):
+        st.info("That is not the target. Use Undo or Reset to try another way.")
+
+    pick = state.hunt_pick
+    if running and not numberhunt.is_stuck(game):
+        if pick["first"] is None:
+            prompt = "Tap a number."
+        elif pick["op"] is None:
+            prompt = f"{game.numbers[pick['first']]} … choose an operation."
+        else:
+            prompt = f"{game.numbers[pick['first']]} {pick['op']} … tap the second number."
+        st.caption(prompt)
+
+    with st.container(key="hunt_numbers"):
+        columns = st.columns(max(len(game.numbers), 3))
+        for position, number in enumerate(game.numbers):
+            columns[position].button(
+                str(number),
+                key=f"hunt_num_{position}",
+                type="primary" if pick["first"] == position else "secondary",
+                on_click=on_hunt_number,
+                args=(position,),
+                disabled=not running,
+                width="stretch",
+            )
+    with st.container(key="hunt_operations"):
+        columns = st.columns(len(HUNT_OPERATIONS))
+        for column, (name, op) in zip(columns, HUNT_OPERATIONS.items()):
+            column.button(
+                op,
+                key=f"hunt_op_{name}",
+                type="primary" if pick["op"] == op else "secondary",
+                on_click=on_hunt_operation,
+                args=(op,),
+                disabled=not running or pick["first"] is None,
+                width="stretch",
+            )
+
+    if game.steps:
+        chips = "".join(f'<span class="hunt-step">{step.text}</span>' for step in game.steps)
+        st.html(f'<div class="hunt-steps">{chips}</div>')
+
+    undo_column, reset_column = st.columns(2)
+    undo_column.button(
+        "Undo (costs a life)",
+        key="hunt_undo",
+        on_click=on_hunt_undo,
+        disabled=not running or not game.steps,
+        width="stretch",
+    )
+    reset_column.button(
+        "Reset (costs a life)",
+        key="hunt_reset",
+        on_click=on_hunt_reset,
+        disabled=not running or not game.steps,
+        width="stretch",
+    )
+    render_hunt_flash()
+
+
 def render_games() -> None:
     st.header("Games", anchor=False)
     choice = st.selectbox("Game", GAMES, key="game_choice", on_change=on_game_change)
     st.subheader(choice, anchor=False)
-    st.caption(f"Coming soon: {', '.join(COMING_SOON_GAMES)}")
+    st.caption(f"Games: {', '.join(GAMES)} · Coming soon: {', '.join(COMING_SOON_GAMES)}")
     st.markdown(GAME_RULES[choice])
 
     level_column, button_column = st.columns([2, 1], vertical_alignment="bottom")
-    game = state.get("game")
+    game = state.get("game") or state.get("hunt")
     level_column.selectbox(
         "Level",
         LEVELS,
@@ -517,8 +708,13 @@ def render_games() -> None:
         "New game", key="new_game", type="primary", on_click=on_new_game, width="stretch"
     )
 
-    if game is not None:
-        render_sudoku(game)
+    if "hunt_pick" not in state:
+        state.hunt_pick = {"first": None, "op": None}
+    # Decided by the state key, not isinstance: Streamlit re-imports changed modules.
+    if "hunt" in state:
+        render_hunt(state.hunt)
+    elif "game" in state:
+        render_sudoku(state.game)
 
 
 def main() -> None:
