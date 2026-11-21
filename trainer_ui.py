@@ -16,6 +16,7 @@ import streamlit as st
 
 import trainer_db
 from tasks import LEVELS
+from ui_components import EXAMPLE_SEED, example_box, pick
 from trainer import (
     CATEGORIES,
     COUNTDOWN_SECONDS,
@@ -63,7 +64,6 @@ FLASH_COLORS = {Outcome.CORRECT: "rgb(22, 163, 74)", Outcome.WRONG: "rgb(220, 38
 FLASH_MS = 700
 LONG_TASK_LENGTH = 40  # longer tasks, such as word problems, use a smaller heading
 HISTORY_LENGTH = 10
-EXAMPLE_SEED = 7  # a fixed seed, so the example does not change on every rerun
 
 NUMBER_TYPE_NOTES = {
     NATURAL: "Whole numbers. Type answers as whole numbers.",
@@ -233,29 +233,14 @@ def _on_change_settings() -> None:
 # --- Setup screen ---
 
 
-def _pick(widget, label: str, options, key: str, **options_for_widget) -> str:
-    """One choice out of a few. It cannot be empty and is remembered for the session."""
-    options = list(options)
-    choice = widget(
-        label,
-        options,
-        default=options[0],
-        required=True,
-        key=key,
-        persist_state="session",
-        **options_for_widget,
-    )
-    return choice or options[0]
-
-
 def _pick_operation() -> tuple[str, list[Topic]]:
-    operation = _pick(st.pills, "Operation", OPERATIONS, "tr_operation")
-    level = _pick(st.segmented_control, "Level", LEVELS, "tr_level")
+    operation = pick(st.pills, "Operation", OPERATIONS, "tr_operation")
+    level = pick(st.segmented_control, "Level", LEVELS, "tr_level")
     return operation, [Topic(NATURAL, operation, level)]
 
 
 def _pick_number_type() -> tuple[str, list[Topic]]:
-    number_type = _pick(st.pills, "Number type", NUMBER_TYPES, "tr_number_type")
+    number_type = pick(st.pills, "Number type", NUMBER_TYPES, "tr_number_type")
     st.caption(NUMBER_TYPE_NOTES[number_type])
     st.markdown("Operations and their levels")
 
@@ -268,7 +253,7 @@ def _pick_number_type() -> tuple[str, list[Topic]]:
             key=f"tr_use_{number_type}_{operation}",
             persist_state="session",
         )
-        level = _pick(
+        level = pick(
             level_column.segmented_control,
             f"Level for {operation}",
             LEVELS,
@@ -282,14 +267,14 @@ def _pick_number_type() -> tuple[str, list[Topic]]:
 
 
 def _pick_special() -> tuple[str, list[Topic]]:
-    training = _pick(st.pills, "Training", SPECIAL_TRAININGS, "tr_special")
+    training = pick(st.pills, "Training", SPECIAL_TRAININGS, "tr_special")
     st.caption(SPECIAL_NOTES[training])
-    level = _pick(st.segmented_control, "Level", LEVELS, "tr_special_level")
+    level = pick(st.segmented_control, "Level", LEVELS, "tr_special_level")
     return training, [Topic(SPECIAL, training, level)]
 
 
 def _pick_mode() -> tuple[str, int]:
-    mode = _pick(st.segmented_control, "Mode", [mode.value for mode in Mode], "tr_mode")
+    mode = pick(st.segmented_control, "Mode", [mode.value for mode in Mode], "tr_mode")
     st.caption(MODE_NOTES[mode])
     label, key, value, step = LIMIT_INPUTS[mode]
     low, high = LIMITS[mode]
@@ -309,9 +294,7 @@ def _render_example(topics: list[Topic]) -> None:
     if not topics:
         return
     example = generate_task(topics, random.Random(EXAMPLE_SEED))
-    with st.container(border=True):
-        st.caption(f"Example task · {example.prompt}")
-        st.markdown(f"**{example.text}**")
+    example_box(example.prompt, example.text)
 
 
 def _render_history() -> None:
@@ -340,7 +323,7 @@ def render_setup() -> None:
     st.header("Trainer", anchor=False)
     st.caption("Practise at your own pace. After a mistake you see how to solve the task.")
 
-    category = _pick(
+    category = pick(
         st.segmented_control, "Training", CATEGORIES, "tr_category", label_visibility="collapsed"
     )
     if category == OPERATIONS_CATEGORY:
