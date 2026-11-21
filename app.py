@@ -12,6 +12,7 @@ import streamlit as st
 import db
 import numberhunt
 import sudoku
+import trainer_ui
 from runs import (
     COUNTDOWN_SECONDS,
     Outcome,
@@ -30,8 +31,11 @@ from runs import (
     submit_answer,
 )
 from tasks import LEVELS, TEST_TYPES, generate_task
+from ui_components import EXAMPLE_SEED, example_box, pick
 
 SECTIONS = ["Tests", "Trainer", "Knowledge", "Games", "Profile"]
+TESTS_DESCRIPTION = "Solve as many tasks as you can in 60 seconds. Only correct answers count."
+EXAMPLE_PROMPT = "Calculate"  # the Trainer's prompt for the basic operations
 NO_VALUE = "–"
 IGNORED_HINT = "Numbers only, e.g. 4250"
 FLASH_COLORS = {"green": "rgb(22, 163, 74)", "red": "rgb(220, 38, 38)"}
@@ -137,8 +141,8 @@ def leave_run(now: datetime) -> None:
 
 
 def on_start() -> None:
-    state.chosen_type = state.test_type
-    state.chosen_level = state.level
+    state.chosen_type = state.get("test_type") or TEST_TYPES[0]
+    state.chosen_level = state.get("level") or LEVELS[0]
     state.phase = "countdown"
 
 
@@ -171,6 +175,7 @@ def on_nav_change() -> None:
         leave_run(now)
     state.pop("result", None)
     state.phase = "select"
+    trainer_ui.leave()
 
 
 # --- Games ---
@@ -263,18 +268,13 @@ def render_coming_soon(section: str) -> None:
 
 def render_select() -> None:
     st.header("Tests", anchor=False)
-    st.selectbox(
-        "Test type",
-        TEST_TYPES,
-        index=TEST_TYPES.index(state.get("chosen_type", TEST_TYPES[0])),
-        key="test_type",
-    )
-    st.selectbox(
-        "Level",
-        LEVELS,
-        index=LEVELS.index(state.get("chosen_level", LEVELS[0])),
-        key="level",
-    )
+    st.caption(TESTS_DESCRIPTION)
+    operation = pick(st.pills, "Operation", TEST_TYPES, "test_type")
+    level = pick(st.segmented_control, "Level", LEVELS, "level")
+    # Display only: its own random generator, so it is not counted, not saved,
+    # and not the first task of the test.
+    example = generate_task(operation, level, random.Random(EXAMPLE_SEED))
+    example_box(EXAMPLE_PROMPT, example.text)
     st.button("Start", key="start", type="primary", on_click=on_start)
 
     st.subheader("Highscores", anchor=False)
@@ -733,6 +733,8 @@ def main() -> None:
     )
     if section == "Tests":
         render_tests()
+    elif section == "Trainer":
+        trainer_ui.render()
     elif section == "Games":
         render_games()
     else:
