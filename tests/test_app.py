@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 from streamlit.testing.v1 import AppTest
+from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 
 import db
 
@@ -21,6 +22,9 @@ TEST_TYPES = ["Addition", "Subtraction", "Multiplication", "Division", "Random"]
 LEVELS = ["Easy", "Medium", "Hard", "Pro"]
 NO_HIGHSCORE = "–"
 FINISHED = datetime(2026, 11, 3, 12, 1, 0, tzinfo=timezone.utc)
+TESTS_DESCRIPTION = "Solve as many tasks as you can in 60 seconds. Only correct answers count."
+SIGNS = {"Addition": "+", "Subtraction": "−", "Multiplication": "×", "Division": "÷"}
+ADDITION_RANGES = {"Easy": (1, 19), "Medium": (20, 249), "Hard": (250, 1249), "Pro": (1250, 5000)}
 
 
 @pytest.fixture(autouse=True)
@@ -42,8 +46,8 @@ def open_app():
 
 
 def start_test(at, test_type="Multiplication", level="Easy"):
-    at.selectbox(key="test_type").set_value(test_type)
-    at.selectbox(key="level").set_value(level)
+    at.button_group(key="test_type").set_value(test_type)
+    at.button_group(key="level").set_value(level)
     at.button(key="start").click().run()
     assert not at.exception
     return at
@@ -109,7 +113,7 @@ def test_tests_is_the_first_screen_and_is_built():
     assert "Coming soon" not in page_text(at)
 
 
-@pytest.mark.parametrize("section", ["Trainer", "Knowledge", "Games", "Profile"])
+@pytest.mark.parametrize("section", ["Knowledge", "Games", "Profile"])
 def test_other_sections_show_coming_soon(section):
     at = open_app()
     go_to(at, section)
@@ -121,8 +125,8 @@ def test_other_sections_show_coming_soon(section):
 
 def test_pickers_offer_five_test_types_and_four_levels():
     at = open_app()
-    assert list(at.selectbox(key="test_type").options) == TEST_TYPES
-    assert list(at.selectbox(key="level").options) == LEVELS
+    assert list(at.button_group(key="test_type").options) == TEST_TYPES
+    assert list(at.button_group(key="level").options) == LEVELS
 
 
 def test_highscore_table_has_all_20_cells_and_shows_a_dash_when_empty():
@@ -130,6 +134,119 @@ def test_highscore_table_has_all_20_cells_and_shows_a_dash_when_empty():
     assert list(table.index) == TEST_TYPES
     assert list(table.columns) == LEVELS
     assert all(table.loc[t, level] == NO_HIGHSCORE for t in TEST_TYPES for level in LEVELS)
+
+
+# --- Tests screen design (spec 008) ---
+
+
+def choose(at, key, value):
+    """Pick one option of a row of pills or of a segmented control."""
+    at.button_group(key=key).set_value(value).run()
+    assert not at.exception
+
+
+def example_task(at):
+    """The text of the example task box on the Tests screen."""
+    assert any("Example task" in caption.value for caption in at.caption)
+    bold = [md.value for md in at.markdown if md.value.startswith("**") and md.value.endswith("**")]
+    assert len(bold) == 1
+    return bold[0].strip("*")
+
+
+def numbers_in(text):
+    return [int(part.replace(",", "")) for part in text.split() if part.replace(",", "").isdigit()]
+
+
+def test_tests_screen_shows_the_description():
+    assert TESTS_DESCRIPTION in [caption.value for caption in open_app().caption]
+
+
+def test_operation_buttons_offer_five_operations_with_addition_first():
+    picker = open_app().button_group(key="test_type")
+    assert picker.proto.label == "Operation"
+    assert list(picker.options) == TEST_TYPES
+    assert picker.value == "Addition"
+
+
+def test_level_buttons_offer_four_levels_with_easy_first():
+    picker = open_app().button_group(key="level")
+    assert picker.proto.label == "Level"
+    assert list(picker.options) == LEVELS
+    assert picker.value == "Easy"
+
+
+def test_tests_uses_the_same_controls_as_the_trainer():
+    at = open_app()
+    operation_style = at.button_group(key="test_type").proto.style
+    level_style = at.button_group(key="level").proto.style
+    go_to(at, "Trainer")
+    assert operation_style == at.button_group(key="tr_operation").proto.style
+    assert level_style == at.button_group(key="tr_level").proto.style
+    assert operation_style == ButtonGroupProto.Style.PILLS
+    assert level_style == ButtonGroupProto.Style.SEGMENTED_CONTROL
+
+
+def test_tests_screen_has_no_dropdown_and_no_mode():
+    at = open_app()
+    assert len(at.selectbox) == 0
+    assert len(at.number_input) == 0
+
+
+@pytest.mark.parametrize("operation", list(SIGNS))
+def test_example_task_follows_the_selected_operation(operation):
+    at = open_app()
+    choose(at, "test_type", operation)
+    assert SIGNS[operation] in example_task(at)
+
+
+def test_example_task_for_random_uses_one_of_the_four_operations():
+    at = open_app()
+    choose(at, "test_type", "Random")
+    assert any(sign in example_task(at) for sign in SIGNS.values())
+
+
+@pytest.mark.parametrize("level", LEVELS)
+def test_example_task_follows_the_selected_level(level):
+    at = open_app()
+    choose(at, "level", level)
+    low, high = ADDITION_RANGES[level]
+    numbers = numbers_in(example_task(at))
+    assert len(numbers) == 2
+    assert all(low <= number <= high for number in numbers)
+
+
+def test_example_task_stays_the_same_until_the_selection_changes():
+    at = open_app()
+    first = example_task(at)
+    at.run()
+    assert example_task(at) == first
+    choose(at, "test_type", "Multiplication")
+    assert example_task(at) != first
+
+
+def test_choosing_and_viewing_examples_saves_nothing():
+    at = open_app()
+    for operation in TEST_TYPES:
+        choose(at, "test_type", operation)
+    for level in LEVELS:
+        choose(at, "level", level)
+    assert db.list_runs() == []
+    assert "run" not in at.session_state
+
+
+def test_start_uses_the_selected_operation_and_level(fast_sleep):
+    at = start_test(open_app(), "Division", "Pro")
+    run = at.session_state["run"]
+    assert (run.test_type, run.level) == ("Division", "Pro")
+    assert at.session_state["current_task"].operation == "Division"
+
+
+def test_selection_is_remembered_after_aborting(fast_sleep):
+    at = start_test(open_app(), "Division", "Pro")
+    at.button(key="abort").click().run()
+    assert not at.exception
+    assert at.button_group(key="test_type").value == "Division"
+    assert at.button_group(key="level").value == "Pro"
 
 
 # --- Running test (MB02, MB03) ---
@@ -200,12 +317,12 @@ def test_aborted_run_saves_nothing_and_returns_to_the_tests_screen(fast_sleep):
 
 def test_leaving_the_section_during_a_run_saves_nothing(fast_sleep):
     at = start_test(open_app())
-    go_to(at, "Trainer")
+    go_to(at, "Knowledge")
     assert "Coming soon" in page_text(at)
     go_to(at, "Tests")
 
     assert db.list_runs() == []
-    assert at.selectbox(key="test_type").options  # back on the choice screen, not in the run
+    assert at.button_group(key="test_type").options  # back on the choice screen, not in the run
 
 
 # --- Completed runs (MB04, MB R4, MB R5, A5) ---
