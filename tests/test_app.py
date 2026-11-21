@@ -721,3 +721,88 @@ def test_magic_solving_shows_you_solved_it():
         magic_enter(at, row, col, right)
     assert "You solved it!" in page_text(at)
     assert metrics(at)["Lives"] == "3"
+
+
+# --- Games: Number Chain (spec 002e) ---
+
+
+def start_chain_game(level="Easy"):
+    at = open_app()
+    go_to(at, "Games")
+    at.selectbox(key="game_choice").set_value("Number Chain").run()
+    assert not at.exception
+    at.selectbox(key="game_level").set_value(level)
+    at.button(key="new_game").click().run()
+    assert not at.exception
+    return at
+
+
+def show_chain(at):
+    """Start the chain; with fast_sleep the steps run by in a moment."""
+    at.button(key="chain_start").click().run()
+    assert not at.exception
+
+
+def answer_chain(at, text):
+    at.text_input(key="chain_answer").input(text)
+    at.button(key="chain_submit").click().run()
+    assert not at.exception
+
+
+def test_games_picker_offers_number_chain():
+    at = open_app()
+    go_to(at, "Games")
+    assert "Number Chain" in at.selectbox(key="game_choice").options
+
+
+def test_new_chain_game_shows_lives_score_and_a_start_button():
+    at = start_chain_game()
+    assert metrics(at)["Lives"] == "3"
+    assert metrics(at)["Score"] == "0"
+    assert metrics(at)["Steps"] == "4"
+    assert at.button(key="chain_start").label == "Start chain"
+
+
+def test_chain_steps_are_followed_by_an_answer_field(fast_sleep):
+    at = start_chain_game()
+    show_chain(at)
+    assert at.text_input(key="chain_answer") is not None
+    assert at.session_state["chain_phase"] == "answer"
+
+
+def test_right_chain_result_raises_the_score(fast_sleep):
+    at = start_chain_game()
+    result = at.session_state["chain"].chain.result
+    show_chain(at)
+    answer_chain(at, str(result))
+    assert metrics(at)["Score"] == "1"
+    assert metrics(at)["Steps"] == "5"
+    assert "Right!" in page_text(at)
+    assert at.button(key="chain_start").label == "Next chain"
+
+
+def test_wrong_chain_result_costs_a_life_and_shows_the_result(fast_sleep):
+    at = start_chain_game()
+    result = at.session_state["chain"].chain.result
+    show_chain(at)
+    answer_chain(at, str(result + 1))
+    assert metrics(at)["Lives"] == "2"
+    assert any(str(result) in w.value for w in at.warning)
+
+
+def test_non_numeric_chain_answer_changes_nothing(fast_sleep):
+    at = start_chain_game()
+    show_chain(at)
+    answer_chain(at, "abc")
+    assert metrics(at)["Lives"] == "3"
+    assert at.session_state["chain_phase"] == "answer"
+
+
+def test_three_wrong_chain_results_show_game_over(fast_sleep):
+    at = start_chain_game()
+    for _ in range(3):
+        result = at.session_state["chain"].chain.result
+        show_chain(at)
+        answer_chain(at, str(result + 1))
+    assert "Game over" in page_text(at)
+    assert "You solved 0 chains" in page_text(at)
