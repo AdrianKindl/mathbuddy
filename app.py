@@ -30,15 +30,23 @@ from runs import (
     submit_answer,
 )
 from tasks import LEVELS, TEST_TYPES, generate_task
-from ui_components import EXAMPLE_SEED, example_box, pick
+import knowledge_ui
+from ui_components import (
+    EXAMPLE_SEED,
+    FLASH_COLORS,
+    FLASH_MS,
+    answer_flash,
+    answer_focus,
+    answer_form,
+    example_box,
+    pick,
+)
 
 SECTIONS = ["Tests", "Trainer", "Knowledge", "Games", "Profile"]
 TESTS_DESCRIPTION = "Solve as many tasks as you can in 60 seconds. Only correct answers count."
 EXAMPLE_PROMPT = "Calculate"  # the Trainer's prompt for the basic operations
 NO_VALUE = "–"
 IGNORED_HINT = "Numbers only, e.g. 4250"
-FLASH_COLORS = {"green": "rgb(22, 163, 74)", "red": "rgb(220, 38, 38)"}
-FLASH_MS = 700
 LIVES = sudoku.LIVES
 SUDOKU_VARIANTS = {"Mini Sudoku": sudoku.MINI, "Sudoku": sudoku.CLASSIC}
 GAMES = list(SUDOKU_VARIANTS)
@@ -168,6 +176,7 @@ def on_nav_change() -> None:
     state.pop("result", None)
     state.phase = "select"
     trainer_ui.leave()
+    knowledge_ui.leave()
 
 
 # --- Games ---
@@ -266,61 +275,17 @@ def render_timer() -> None:
     st.metric("Time left", math.ceil(remaining_seconds(run, now)))
 
 
-def render_flash() -> None:
-    color = state.get("flash")
-    if color is None:
-        return
-    # A new animation name per attempt makes the same colour replay. The colour
-    # holds for most of the flash, then fades back to the field's normal look.
-    name = f"flash-{state.attempt}"
-    flash_color = FLASH_COLORS[color]
-    st.html(
-        f"""<style>
-        @keyframes {name} {{
-            0%, 60% {{
-                background-color: {flash_color};
-                border-color: {flash_color};
-                box-shadow: 0 0 0 3px {flash_color}, 0 0 18px 6px {flash_color};
-            }}
-        }}
-        .st-key-answer [data-testid="stTextInputRootElement"] {{
-            animation: {name} {FLASH_MS}ms ease-out;
-        }}
-        </style>"""
-    )
-
-
-def render_focus_script() -> None:
-    """Put the cursor back in the answer field. Clicking a button would move it away."""
-    st.html(
-        f"""<script data-attempt="{state.attempt}">
-        requestAnimationFrame(() => {{
-            document.querySelector(".st-key-answer input")?.focus();
-        }});
-        </script>""",
-        unsafe_allow_javascript=True,
-    )
-
-
 def render_running() -> None:
     render_timer()
     st.header(state.current_task.text, anchor=False)
-
-    with st.form("answer_form", clear_on_submit=True, border=False):
-        st.text_input("Answer", key="answer", autocomplete="off")
-        submit_column, skip_column = st.columns(2)
-        # Submit comes first, because Enter triggers the first button in a form.
-        submit_column.form_submit_button(
-            "Submit", key="submit", type="primary", on_click=on_submit, width="stretch"
-        )
-        skip_column.form_submit_button("Skip", key="skip", on_click=on_skip, width="stretch")
+    answer_form("", on_submit, on_skip)
 
     if state.show_hint:
         st.warning(IGNORED_HINT)
     st.button("Abort test", key="abort", on_click=on_abort)
 
-    render_flash()
-    render_focus_script()
+    answer_flash("", state.get("flash"), state.attempt)
+    answer_focus("", state.attempt)
 
 
 def render_result() -> None:
@@ -539,6 +504,8 @@ def main() -> None:
         render_tests()
     elif section == "Trainer":
         trainer_ui.render()
+    elif section == "Knowledge":
+        knowledge_ui.render()
     elif section == "Games":
         render_games()
     else:
