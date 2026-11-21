@@ -102,19 +102,85 @@ at most half a unit in the last shown digit of the right side
 7. **Body lists:** B2 and B3 bodies are lists of items as in the brief; the
    other bodies are one paragraph.
 
-## Open questions for stage 2 (from the brief)
-- TA9 says 7,341 ÷ 83 is "88.45…"; it is 88.4458…, so "88.44…" (the
-  accepted range 80–97 is right either way).
-- A decimal separator "," clashes with "no thousands separators": "1,250" would
-  be read as 1.25.
-- Rounding: half up or half to even (12.25 → 12.3 or 12.2)? More decimals than
-  asked ("66.67" for 1 decimal place): wrong, or not evaluated?
-- Estimate range ±10 %: are the limits included?
-- C3 Medium "33.3 ↔ 50": is the answer for margin 33.3 % 50 % or 49.9 %?
-- F3 Hard "x from {0.04 … 0.81}": which values exactly?
-- Article names differ between the catalogue, the practice table and the
-  scenarios ("The rule of 72" vs "Rule of 72", "Rules for negative numbers"
-  vs "Negative numbers"). The catalogue names are used on screen.
+## Stage 2 – Structure
+- `textbook.py` gets the practice rules: `TextbookTask` (article, template,
+  values, prompt, answer type, exact answer, decimals, percent, choices),
+  `generate_task`, `evaluate`, `answer_text`, the round (`start_round`,
+  `current_task`, `submit_answer`, `skip_task`) and `practised`. A task's
+  `template` is the calculation over its `values`, so tests can recompute
+  every answer independently.
+- `textbook_db.py`: completed rounds in a new table `textbook_rounds`
+  (id, article_id, level, finished_at, correct), through `db.connect()`.
+- `textbook_ui.py`: the practice screens, built from the Tricks practice
+  components (level buttons, answer form, flash, focus). Choice tasks show one
+  button per option; choosing one submits it. Tricks practice is unchanged.
+
+## Stage 2 – Decisions on unclear points in the brief (to confirm)
+**Answers (T R7, T R8)**
+1. **Rounding** is half away from zero: 10.25 % with 1 decimal place is 10.3 %.
+2. **Decimal answers** are compared by value with the rounded result: "66.70"
+   is right, "66.67" is wrong (not ignored). "8" is accepted for 8.0.
+3. **Comma:** in a decimal answer "," is always the decimal separator, so
+   "1,250" means 1.25. In a whole-number or estimate answer a comma is not
+   accepted, and the input is not evaluated.
+4. **Minus sign:** "-" and "−" are both accepted. "%" is accepted after any
+   decimal answer and ignored.
+5. **Estimates** are whole numbers; the ±10 % limits are included. After a
+   wrong estimate the exact result and the accepted whole numbers are shown,
+   e.g. "88.45 (accepted: 80 to 97)".
+6. **TA9** says 7,341 ÷ 83 is "88.45…"; it is 88.4458…. Shown rounded to two
+   decimals it is 88.45; the accepted range 80–97 is right either way.
+
+**Practice catalogue: ranges that do not work as written, and the fix used**
+7. **B3 Medium ÷ 100:** a two-decimal number divided by 100 has four decimals,
+   which a two-decimal answer cannot express. ÷ 10 uses numbers with one
+   decimal (0.1–99.9), ÷ 100 uses whole numbers (1–999). "Two decimal places"
+   numbers are 0.01–9.99.
+8. **F1 Pro:** the rounded table percentages (33.3 %, 66.7 %, 16.7 %, 83.3 %,
+   8.3 %) never give a whole result (33.3 % of 300 = 99.9). Only the exact
+   ones are used: 10, 12.5, 20, 25, 37.5, 40, 50, 60, 62.5, 75, 80, 87.5 %.
+9. **C3 Medium:** margin 33.3 % → markup gives 49.9 %, not the table's 50 %.
+   That direction is left out; markup 33.3 % → margin (25.0 %) is kept.
+10. **C6 Pro:** a price cut can make the price equal to or lower than the
+    variable cost, so there is no break-even. The new price must be whole and
+    above the variable cost.
+11. **E1 Medium:** the difference of two 4-digit numbers can be tiny or 0
+    (±10 % of 14 is 13–15; of 0 only 0). The larger number comes first and the
+    difference is at least 1,000.
+12. **F3 Easy and Medium:** every x is between 0 and 1, so the right answer is
+    always "x" (Easy) or always "√x" (Medium). Built as written; worth a
+    content decision.
+13. **C7:** M × B, B × M and B × B have no unit and are never used. Results keep
+    the coefficient and take the unit from the table ("1,500 M", "98,901 T"),
+    and the four options are that coefficient with K, M, B and T, so exactly
+    one is right.
+
+**Ranges the brief leaves open, and the values used**
+14. B2 Hard: a × b with |a|, |b| 2–20, or a ÷ b with |b| and |a ÷ b| 2–20,
+    any signs. B3 Easy and Pro: results are at least 0.
+15. F1 Easy uses fractions in lowest terms with denominator 2, 4, 5 or 10;
+    Hard thirds, sixths and twelfths in lowest terms. F2: all fractions are
+    proper; in Hard and Pro about one task in five is "Equal", shown as two
+    different fractions. F3 Hard and Pro: x is 0.04, 0.09, …, 0.81, 1.21, 1.44,
+    2.25 or 4.
+16. C2 Hard: 1–3 doubling periods with an Easy rate, start 5–50 bn. C3 Easy:
+    the asked margin or markup is a whole percent. C4 Easy and Medium: the new
+    value is whole and the change a whole percent. C5 Easy values 10–90 in
+    tens; Pro sizes 100–900 in hundreds. C6 Medium and Hard: price up to 200,
+    fixed costs in thousands.
+17. E2 Easy divides by 2–9. E2 Medium: the divisor is at most 3 from a
+    multiple of 10, and the dividend within 5 % of a multiple of that round
+    number. E2 Pro "near 50 or 100": both factors 45–55, or both 95–99.
+    E3 Easy multiplies by 2–9; Pro "three factors" are 2-digit. E4 Hard and
+    Pro: about half the tasks are correct; wrong results differ by 1–99, never
+    a multiple of 9.
+18. **Names:** the catalogue names are used on screen ("The rule of 72").
+
+**Screens**
+19. Practice keys and texts follow Tricks: level buttons, Start, "Task 4 / 10",
+    Submit and Skip, "Back to article" to leave early, result "x / 10" with
+    **Practise again** and **Back to article**. Input of the wrong type shows a
+    hint naming the expected format.
 
 ## Changes to earlier specs
 Textbook no longer shows "Coming soon" (spec 009). In `tests/test_knowledge_ui.py`
@@ -144,4 +210,18 @@ Tests, Trainer, Games, `tasks.py`, `runs.py`, `db.py` or existing tables.
 - **Unchanged:** all other existing tests pass.
 
 ## Done when (stage 2)
-TA8–TA12, to be detailed when stage 2 starts.
+- **TA8:** for every article and level, 1,000 tasks (fixed seed) follow the
+  template and ranges above; whole-number answers are whole, decimal answers
+  state their precision, estimates start with "Estimate", choices have 2–4
+  different options with exactly one correct.
+- **TA9:** decimal 66.666… with 1 decimal place: "66.7", "66,7", "66.7%" right,
+  "66.6" wrong, "abc" not evaluated. Estimate of 7,341 ÷ 83: 80 and 97 right,
+  79 and 98 wrong. Whole number: "-12" is −12.
+- **TA10:** a round has 10 tasks; 6 correct, 3 wrong, 1 skipped shows 6 / 10.
+- **TA11:** after one completed round of "The rule of 72" it shows a ✓ in Case
+  interview, also after a restart; no other article has one; Tricks ✓ markers
+  are unchanged.
+- **TA12:** leaving a round after 5 tasks saves nothing.
+- **Unchanged:** Tricks practice and all other existing tests; in
+  `tests/test_textbook_ui.py` only the stage 1 Practice-button test changes
+  (the button is now enabled).

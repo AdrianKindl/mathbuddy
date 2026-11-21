@@ -3,21 +3,19 @@ in knowledge.py and the storage in knowledge_db.py.
 
 app.py calls `render()` to show the Knowledge tab and `leave()` when the user
 switches to another section. Everything this file keeps in st.session_state
-starts with "kn_", so it cannot clash with the other tabs.
+starts with "kn_", so it cannot clash with the other tabs. The practice round
+itself runs in the flow shared with Textbook (practice_ui.py).
 """
 
 import random
-import uuid
-from datetime import datetime, timezone
 
 import streamlit as st
 
 import knowledge_db
+import textbook_ui
 from knowledge import (
     ROUND_LENGTH,
     Outcome,
-    Round,
-    Status,
     current_task,
     generate_task,
     neighbours,
@@ -27,14 +25,11 @@ from knowledge import (
     start_round,
     submit_answer,
 )
-import textbook_ui
 from knowledge_content import CATEGORIES, category_of, get_category, get_trick
+from practice_ui import Practice
 from tasks import LEVELS
 from ui_components import (
     EXAMPLE_SEED,
-    answer_flash,
-    answer_focus,
-    answer_form,
     back_button,
     card_header,
     example_box,
@@ -49,14 +44,41 @@ TEXTBOOK_MODE = "Textbook"
 DESCRIPTION = "Learn mental-math tricks step by step, then practise exactly that trick."
 PRACTICE_NOTE = f"{ROUND_LENGTH} tasks for this trick, no time limit."
 IGNORED_HINT = "Numbers only, e.g. 4250"
-FLASH = {Outcome.CORRECT: "green", Outcome.WRONG: "red"}
-ROUND_KEYS = ("kn_round", "kn_round_id", "kn_rng", "kn_flash", "kn_hint", "kn_feedback")
 
 state = st.session_state
 
 
-def _utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+def _show_feedback(attempt) -> None:
+    """How the previous task went. After a wrong answer or skip, the answer is shown."""
+    task = attempt.task
+    if attempt.outcome == Outcome.CORRECT:
+        st.success(f"Correct! {task.text} = {task.answer:,}")
+    elif attempt.outcome == Outcome.WRONG:
+        st.error(
+            f"Not quite. You answered {attempt.given} for {task.text}. "
+            f"The answer is {task.answer:,}."
+        )
+    else:
+        st.warning(f"Skipped {task.text}. The answer is {task.answer:,}.")
+
+
+PRACTICE = Practice(
+    "kn_",
+    start_round=start_round,
+    submit_answer=submit_answer,
+    skip_task=skip_task,
+    current_task=current_task,
+    save_round=knowledge_db.save_round,
+    item_of=lambda practice_round: practice_round.trick_id,
+    item_screen="trick",
+    back_label="Back to trick",
+    back_key="kn_to_trick",
+    show_task=lambda task: st.header(task.text, anchor=False),
+    show_feedback=_show_feedback,
+    hint=lambda task: IGNORED_HINT,
+    placeholder=lambda task: "Whole number",
+    length=ROUND_LENGTH,
+)
 
 
 # --- Changing screens ---
@@ -77,75 +99,14 @@ def _open_trick(trick_id: str) -> None:
     state.kn_screen = "trick"
 
 
-def _clear_round() -> None:
-    for name in ROUND_KEYS:
-        state.pop(name, None)
-
-
-def _begin(trick_id: str, level: str) -> None:
-    _clear_round()
-    state.pop("kn_result", None)
-    state.kn_rng = random.Random()
-    state.kn_round = start_round(trick_id, level, state.kn_rng)
-    state.kn_round_id = str(uuid.uuid4())
-    state.kn_attempt = state.get("kn_attempt", 0) + 1
-    state.kn_screen = "running"
-
-
-def _finish(practice_round: Round) -> None:
-    """Save the completed round and show the result. Safe to repeat (K R6)."""
-    knowledge_db.save_round(state.kn_round_id, practice_round, _utc_now())
-    state.kn_result = practice_round
-    feedback = state.get("kn_feedback")
-    _clear_round()
-    state.kn_feedback = feedback  # the result also shows how the last task went
-    state.kn_screen = "result"
-
-
-def _apply(practice_round: Round, outcome: Outcome) -> None:
-    state.kn_attempt += 1  # the flash and the focus script run again for every attempt
-    state.kn_round = practice_round
-    state.kn_hint = outcome == Outcome.IGNORED
-    state.kn_flash = FLASH.get(outcome)
-    if outcome != Outcome.IGNORED:
-        state.kn_feedback = practice_round.attempts[-1]
-    if practice_round.status == Status.COMPLETED:
-        _finish(practice_round)
-
-
 def leave() -> None:
     """For app.py: the user switched to another section. A running round is not saved."""
-    if "kn_screen" not in state:
-        return
-    _clear_round()
-    state.pop("kn_result", None)
-    if state.kn_screen in ("setup", "running", "result"):
-        state.kn_screen = "trick"
-
-
-# --- Callbacks ---
+    PRACTICE.leave()
+    textbook_ui.leave()
 
 
 def _on_start() -> None:
-    _begin(state.kn_trick, state.get("kn_level") or LEVELS[0])
-
-
-def _on_submit() -> None:
-    _apply(*submit_answer(state.kn_round, state.kn_answer))
-
-
-def _on_skip() -> None:
-    _apply(*skip_task(state.kn_round))
-
-
-def _on_leave_round() -> None:
-    _clear_round()  # leaving early saves nothing (K R6)
-    state.kn_screen = "trick"
-
-
-def _on_again() -> None:
-    result = state.kn_result
-    _begin(result.trick_id, result.level)
+    PRACTICE.begin(state.kn_trick, state.get("kn_level") or LEVELS[0])
 
 
 def _open_trick_from_textbook(trick_id: str) -> None:
@@ -153,16 +114,10 @@ def _open_trick_from_textbook(trick_id: str) -> None:
 
     A round that was running in Tricks ends without saving, as when leaving it.
     """
-    _clear_round()
+    PRACTICE.clear()
     state.pop("kn_result", None)
     state.kn_mode = TRICKS_MODE
     _open_trick(trick_id)
-
-
-def _on_back_to_trick() -> None:
-    state.pop("kn_result", None)
-    _clear_round()
-    state.kn_screen = "trick"
 
 
 # --- Screens ---
@@ -243,59 +198,13 @@ def render_setup() -> None:
     st.button("Start", key="kn_start", type="primary", on_click=_on_start)
 
 
-def _render_feedback() -> None:
-    """How the previous task went. After a wrong answer or skip, the answer is shown."""
-    attempt = state.get("kn_feedback")
-    if attempt is None:
-        return
-    task = attempt.task
-    if attempt.outcome == Outcome.CORRECT:
-        st.success(f"Correct! {task.text} = {task.answer:,}")
-    elif attempt.outcome == Outcome.WRONG:
-        st.error(
-            f"Not quite. You answered {attempt.given} for {task.text}. "
-            f"The answer is {task.answer:,}."
-        )
-    else:
-        st.warning(f"Skipped {task.text}. The answer is {task.answer:,}.")
-
-
 def render_running() -> None:
     practice_round = state.kn_round
-    task = current_task(practice_round)
-    done = len(practice_round.attempts)
-
-    st.caption(f"{get_trick(practice_round.trick_id).name} · {practice_round.level}")
-    st.markdown(f"**Task {done + 1} / {ROUND_LENGTH}**")
-    st.progress(done / ROUND_LENGTH)
-    st.header(task.text, anchor=False)
-    answer_form("kn_", _on_submit, _on_skip, placeholder="Whole number")
-
-    if state.get("kn_hint"):
-        st.warning(IGNORED_HINT)
-    _render_feedback()
-    st.button("Back to trick", key="kn_leave", on_click=_on_leave_round)
-
-    answer_flash("kn_", state.get("kn_flash"), state.kn_attempt)
-    answer_focus("kn_", state.kn_attempt)
+    PRACTICE.render_running(f"{get_trick(practice_round.trick_id).name} · {practice_round.level}")
 
 
 def render_result() -> None:
-    result = state.kn_result
-    st.header(f"Practice finished: {get_trick(result.trick_id).name}", anchor=False)
-    st.caption(f"Level: {result.level}")
-    _render_feedback()
-
-    correct, wrong, skipped = st.columns(3)
-    correct.metric("Correct", f"{result.correct} / {ROUND_LENGTH}")
-    wrong.metric("Wrong", result.wrong)
-    skipped.metric("Skipped", result.skipped)
-
-    again, back = st.columns(2)
-    again.button("Practise again", key="kn_again", type="primary", on_click=_on_again,
-                 width="stretch")  # fmt: skip
-    back.button("Back to trick", key="kn_to_trick", on_click=_on_back_to_trick,
-                width="stretch")  # fmt: skip
+    PRACTICE.render_result(f"Practice finished: {get_trick(state.kn_result.trick_id).name}")
 
 
 SCREENS = {

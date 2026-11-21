@@ -179,9 +179,10 @@ def test_next_is_disabled_on_the_last_article():
     assert "7 / 7" in page_text(at)
 
 
-def test_practice_button_is_shown_but_disabled_in_stage_1():
+def test_practice_button_is_enabled_since_stage_2():
+    """Stage 2 of spec 010 builds practice, so the button is no longer disabled."""
     at = open_article("B1", "basics")
-    assert at.button(key="tb_practice").disabled
+    assert not at.button(key="tb_practice").disabled
 
 
 # --- Related tricks (TA6) ---
