@@ -1,6 +1,8 @@
-"""Mini Sudoku rules: puzzle generation, entries, lives, win and loss (spec 002).
+"""Sudoku rules for Mini Sudoku (6×6, spec 002) and Sudoku (9×9, spec 002b):
+puzzle generation, entries, lives, win and loss.
 
-A grid is a tuple of 6 rows of 6 numbers; 0 marks an empty cell.
+A grid is a tuple of rows of numbers; 0 marks an empty cell. The size of the
+grid (6 or 9) decides which variant's rules apply.
 """
 
 import random
@@ -10,18 +12,43 @@ from enum import StrEnum
 
 from tasks import LEVELS
 
+# Mini Sudoku, the default variant.
 SIZE = 6
 BOX_ROWS = 2
 BOX_COLS = 3
 LIVES = 3
-DIGITS = frozenset(range(1, SIZE + 1))
 
 # How many of the 36 cells are empty at the start, per level (spec 002).
 EMPTY_CELLS = {"Easy": 12, "Medium": 16, "Hard": 20, "Pro": 24}
+# How many of the 81 cells are empty at the start, per level (spec 002b).
+SUDOKU_EMPTY_CELLS = {"Easy": 36, "Medium": 42, "Hard": 48, "Pro": 52}
 
 Grid = tuple[tuple[int, ...], ...]
 
-_DIGIT = re.compile(rf"[1-{SIZE}]")
+
+@dataclass(frozen=True)
+class Variant:
+    name: str
+    size: int
+    box_rows: int
+    box_cols: int
+    empty_cells: dict[str, int]
+
+    @property
+    def digits(self) -> frozenset[int]:
+        return frozenset(range(1, self.size + 1))
+
+
+MINI = Variant("Mini Sudoku", SIZE, BOX_ROWS, BOX_COLS, EMPTY_CELLS)
+CLASSIC = Variant("Sudoku", 9, 3, 3, SUDOKU_EMPTY_CELLS)
+VARIANTS = {variant.size: variant for variant in (MINI, CLASSIC)}
+
+
+def variant_of(grid: Grid) -> Variant:
+    """The variant whose rules apply to `grid`, found from its size."""
+    if len(grid) not in VARIANTS or any(len(row) != len(grid) for row in grid):
+        raise ValueError(f"No Sudoku variant for a grid of {len(grid)} rows")
+    return VARIANTS[len(grid)]
 
 
 # StrEnum and compared with ==, for the same reason as in runs.py: Streamlit
@@ -56,66 +83,76 @@ class Game:
 # --- Checking grids ---
 
 
-def _units() -> list[list[tuple[int, int]]]:
-    """Every row, column and 2×3 box as a list of (row, col) cells."""
-    rows = [[(r, c) for c in range(SIZE)] for r in range(SIZE)]
-    cols = [[(r, c) for r in range(SIZE)] for c in range(SIZE)]
+def _units(variant: Variant) -> list[list[tuple[int, int]]]:
+    """Every row, column and box as a list of (row, col) cells."""
+    size = variant.size
+    rows = [[(r, c) for c in range(size)] for r in range(size)]
+    cols = [[(r, c) for r in range(size)] for c in range(size)]
     boxes = [
-        [(r, c) for r in range(top, top + BOX_ROWS) for c in range(left, left + BOX_COLS)]
-        for top in range(0, SIZE, BOX_ROWS)
-        for left in range(0, SIZE, BOX_COLS)
+        [
+            (r, c)
+            for r in range(top, top + variant.box_rows)
+            for c in range(left, left + variant.box_cols)
+        ]
+        for top in range(0, size, variant.box_rows)
+        for left in range(0, size, variant.box_cols)
     ]
     return rows + cols + boxes
 
 
-_UNITS = _units()
-
-
-def _box_start(row: int, col: int) -> tuple[int, int]:
-    return row - row % BOX_ROWS, col - col % BOX_COLS
+_UNITS = {variant.size: _units(variant) for variant in VARIANTS.values()}
 
 
 def is_solved_grid(grid: Grid) -> bool:
-    """True if every row, column and 2×3 box holds each of 1–6 exactly once."""
-    return all({grid[r][c] for r, c in unit} == DIGITS for unit in _UNITS)
+    """True if every row, column and box holds each number exactly once."""
+    variant = variant_of(grid)
+    return all(
+        {grid[r][c] for r, c in unit} == variant.digits for unit in _UNITS[variant.size]
+    )
 
 
-def _has_conflict(grid: list[list[int]]) -> bool:
+def _has_conflict(grid: list[list[int]], variant: Variant) -> bool:
     """True if a filled-in number appears twice in a row, column or box."""
-    for unit in _UNITS:
+    for unit in _UNITS[variant.size]:
         values = [grid[r][c] for r, c in unit if grid[r][c] != 0]
         if len(values) != len(set(values)):
             return True
     return False
 
 
-def _candidates(grid: list[list[int]], row: int, col: int) -> set[int]:
-    top, left = _box_start(row, col)
+def _candidates(grid: list[list[int]], variant: Variant, row: int, col: int) -> set[int]:
+    top = row - row % variant.box_rows
+    left = col - col % variant.box_cols
     used = set(grid[row])
-    used.update(grid[r][col] for r in range(SIZE))
+    used.update(grid[r][col] for r in range(variant.size))
     used.update(
-        grid[r][c] for r in range(top, top + BOX_ROWS) for c in range(left, left + BOX_COLS)
+        grid[r][c]
+        for r in range(top, top + variant.box_rows)
+        for c in range(left, left + variant.box_cols)
     )
-    return DIGITS - used
+    return variant.digits - used
 
 
 def count_solutions(grid: Grid, limit: int = 2) -> int:
     """Count the ways to fill the empty cells, stopping once `limit` is reached."""
+    variant = variant_of(grid)
     work = [list(row) for row in grid]
-    if _has_conflict(work):
+    if _has_conflict(work, variant):
         return 0
-    return _count(work, limit)
+    return _count(work, variant, limit)
 
 
-def _count(grid: list[list[int]], limit: int) -> int:
+def _count(grid: list[list[int]], variant: Variant, limit: int) -> int:
     # Fill the empty cell with the fewest options first: far fewer dead ends.
     best = None
-    for r in range(SIZE):
-        for c in range(SIZE):
+    for r in range(variant.size):
+        for c in range(variant.size):
             if grid[r][c] == 0:
-                options = _candidates(grid, r, c)
+                options = _candidates(grid, variant, r, c)
                 if best is None or len(options) < len(best[2]):
                     best = (r, c, options)
+                    if not options:
+                        return 0  # a dead end: no number fits here
     if best is None:
         return 1  # nothing left to fill: one complete solution
 
@@ -123,7 +160,7 @@ def _count(grid: list[list[int]], limit: int) -> int:
     found = 0
     for value in sorted(options):
         grid[row][col] = value
-        found += _count(grid, limit - found)
+        found += _count(grid, variant, limit - found)
         grid[row][col] = 0
         if found >= limit:
             break
@@ -133,16 +170,16 @@ def _count(grid: list[list[int]], limit: int) -> int:
 # --- Generating puzzles ---
 
 
-def _fill(grid: list[list[int]], rng: random.Random) -> bool:
+def _fill(grid: list[list[int]], variant: Variant, rng: random.Random) -> bool:
     """Fill every empty cell of `grid` in place, trying numbers in random order."""
-    for r in range(SIZE):
-        for c in range(SIZE):
+    for r in range(variant.size):
+        for c in range(variant.size):
             if grid[r][c] == 0:
-                options = sorted(_candidates(grid, r, c))
+                options = sorted(_candidates(grid, variant, r, c))
                 rng.shuffle(options)
                 for value in options:
                     grid[r][c] = value
-                    if _fill(grid, rng):
+                    if _fill(grid, variant, rng):
                         return True
                 grid[r][c] = 0
                 return False
@@ -153,27 +190,28 @@ def _freeze(grid: list[list[int]]) -> Grid:
     return tuple(tuple(row) for row in grid)
 
 
-def generate_puzzle(level: str, rng: random.Random) -> Puzzle:
-    """A new puzzle with exactly one solution and EMPTY_CELLS[level] empty cells."""
+def generate_puzzle(level: str, rng: random.Random, variant: Variant = MINI) -> Puzzle:
+    """A new puzzle with exactly one solution and the level's number of empty cells."""
     if level not in LEVELS:
         raise ValueError(f"Unknown level: {level!r}")
-    target = EMPTY_CELLS[level]
+    target = variant.empty_cells[level]
+    size = variant.size
 
     while True:
-        grid = [[0] * SIZE for _ in range(SIZE)]
-        _fill(grid, rng)
+        grid = [[0] * size for _ in range(size)]
+        _fill(grid, variant, rng)
         solution = _freeze(grid)
 
         # Empty the cells one by one in random order. Put a number back if
         # removing it would allow a second solution.
-        cells = [(r, c) for r in range(SIZE) for c in range(SIZE)]
+        cells = [(r, c) for r in range(size) for c in range(size)]
         rng.shuffle(cells)
         emptied = 0
         for r, c in cells:
             if emptied == target:
                 break
             grid[r][c] = 0
-            if _count(grid, 2) == 1:
+            if _count(grid, variant, 2) == 1:
                 emptied += 1
             else:
                 grid[r][c] = solution[r][c]
@@ -186,25 +224,28 @@ def generate_puzzle(level: str, rng: random.Random) -> Puzzle:
 # --- Playing ---
 
 
-def start_game(level: str, rng: random.Random) -> Game:
-    puzzle = generate_puzzle(level, rng)
+def start_game(level: str, rng: random.Random, variant: Variant = MINI) -> Game:
+    puzzle = generate_puzzle(level, rng, variant)
     return Game(level=level, puzzle=puzzle, grid=puzzle.givens)
 
 
-def parse_entry(raw: str) -> int | None:
-    """The digit 1–6 in `raw`, or None if the entry should not be evaluated."""
+def parse_entry(raw: str, size: int = SIZE) -> int | None:
+    """The number 1–size in `raw`, or None if the entry should not be evaluated."""
     text = raw.strip()
-    return int(text) if _DIGIT.fullmatch(text) else None
+    if not re.fullmatch(r"[1-9]", text) or int(text) > size:
+        return None
+    return int(text)
 
 
 def enter_number(game: Game, row: int, col: int, raw: str) -> tuple[Game, Outcome]:
     """Evaluate an entry: a correct one is locked, a wrong one costs a life."""
-    if not (0 <= row < SIZE and 0 <= col < SIZE):
+    size = variant_of(game.grid).size
+    if not (0 <= row < size and 0 <= col < size):
         raise ValueError(f"Cell outside the grid: ({row}, {col})")
     if game.status != Status.RUNNING or game.grid[row][col] != 0:
         return game, Outcome.IGNORED
 
-    value = parse_entry(raw)
+    value = parse_entry(raw, size)
     if value is None:
         return game, Outcome.IGNORED
 
