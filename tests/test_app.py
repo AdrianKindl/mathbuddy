@@ -328,3 +328,114 @@ def test_app_contains_no_sql():
     source = APP.read_text(encoding="utf-8")
     assert "sqlite3" not in source
     assert "SELECT " not in source
+
+
+# --- Games: Mini Sudoku (spec 002) ---
+
+GAMES = ["Mini Sudoku", "Sudoku", "Number Hunt", "Magic Square"]
+EMPTY_CELLS = {"Easy": 12, "Medium": 16, "Hard": 20, "Pro": 24}
+
+
+def start_game(level="Easy"):
+    at = open_app()
+    go_to(at, "Games")
+    at.selectbox(key="game_level").set_value(level)
+    at.button(key="new_game").click().run()
+    assert not at.exception
+    return at
+
+
+def cell_keys(at):
+    return {box.key for box in at.text_input if box.key.startswith("cell_")}
+
+
+def first_empty_cell(at):
+    game = at.session_state["game"]
+    for r, row in enumerate(game.grid):
+        for c, value in enumerate(row):
+            if value == 0:
+                return r, c, game.puzzle.solution[r][c]
+    raise AssertionError("no empty cell")
+
+
+def enter(at, row, col, text):
+    at.text_input(key=f"cell_{row}_{col}").input(text).run()
+    assert not at.exception
+
+
+def wrong_digit(right):
+    return str(right % 6 + 1)
+
+
+def test_games_section_lists_all_four_games():
+    at = open_app()
+    go_to(at, "Games")
+    text = page_text(at)
+    for game in GAMES:
+        assert game in text
+    assert "Coming soon" in text  # for the three games that are not built yet
+
+
+def test_games_section_offers_the_four_levels():
+    at = open_app()
+    go_to(at, "Games")
+    assert list(at.selectbox(key="game_level").options) == LEVELS
+
+
+@pytest.mark.parametrize("level", LEVELS)
+def test_new_game_shows_one_input_per_empty_cell_and_three_lives(level):
+    at = start_game(level)
+    assert len(cell_keys(at)) == EMPTY_CELLS[level]
+    assert metrics(at)["Lives"] == "3"
+
+
+def test_correct_entry_locks_the_cell_and_keeps_the_lives():
+    at = start_game()
+    row, col, right = first_empty_cell(at)
+    enter(at, row, col, str(right))
+    assert f"cell_{row}_{col}" not in cell_keys(at)
+    assert len(cell_keys(at)) == EMPTY_CELLS["Easy"] - 1
+    assert metrics(at)["Lives"] == "3"
+
+
+def test_wrong_entry_lowers_the_lives_on_screen():
+    at = start_game()
+    row, col, right = first_empty_cell(at)
+    enter(at, row, col, wrong_digit(right))
+    assert metrics(at)["Lives"] == "2"
+    assert f"cell_{row}_{col}" in cell_keys(at)
+
+
+def test_non_numeric_entry_costs_no_life():
+    at = start_game()
+    row, col, _ = first_empty_cell(at)
+    enter(at, row, col, "x")
+    assert metrics(at)["Lives"] == "3"
+
+
+def test_three_wrong_entries_show_game_over():
+    at = start_game()
+    row, col, right = first_empty_cell(at)
+    for _ in range(3):
+        enter(at, row, col, wrong_digit(right))
+    assert "Game over" in page_text(at)
+    assert not cell_keys(at)
+
+
+def test_solving_every_cell_shows_you_solved_it():
+    at = start_game()
+    for _ in range(EMPTY_CELLS["Easy"]):
+        row, col, right = first_empty_cell(at)
+        enter(at, row, col, str(right))
+    assert "You solved it!" in page_text(at)
+    assert metrics(at)["Lives"] == "3"
+
+
+def test_a_new_game_starts_fresh_after_game_over():
+    at = start_game()
+    row, col, right = first_empty_cell(at)
+    for _ in range(3):
+        enter(at, row, col, wrong_digit(right))
+    at.button(key="new_game").click().run()
+    assert metrics(at)["Lives"] == "3"
+    assert len(cell_keys(at)) == EMPTY_CELLS["Easy"]
