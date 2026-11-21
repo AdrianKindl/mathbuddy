@@ -24,13 +24,71 @@ def pick(widget, label: str, options, key: str, **options_for_widget) -> str:
     choice = widget(
         label,
         options,
-        default=options[0],
+        # Once the key exists, its value counts. A default as well would make
+        # Streamlit warn when a callback sets the choice through session_state.
+        default=None if key in st.session_state else options[0],
         required=True,
         key=key,
         persist_state="session",
         **options_for_widget,
     )
     return choice or options[0]
+
+
+# --- Knowledge pieces, shared by Tricks and Textbook. A row or tile is
+# (label, key, args): `args` is passed to the click handler. ---
+
+
+def back_button(key: str, on_click: Callable, args: tuple = ()) -> None:
+    st.button("← Back", key=key, on_click=on_click, args=args)
+
+
+def tile_grid(tiles: list[tuple[str, str, tuple]], on_click: Callable, per_row: int = 3) -> None:
+    """Tiles in rows of `per_row`. One row of columns at a time keeps their order."""
+    for start in range(0, len(tiles), per_row):
+        columns = st.columns(per_row)
+        for column, (label, key, args) in zip(columns, tiles[start : start + per_row]):
+            column.button(label, key=key, on_click=on_click, args=args, width="stretch")
+
+
+def list_rows(rows: list[tuple[str, str, tuple]], on_click: Callable) -> None:
+    for label, key, args in rows:
+        st.button(label, key=key, on_click=on_click, args=args, width="stretch")
+
+
+def card_header(title: str, category: str, difficulty: str) -> None:
+    """A card's title with its category and difficulty tags."""
+    st.markdown(f"**{title}**  \n:blue-badge[{category}] :orange-badge[{difficulty}]")
+
+
+def previous_next_bar(
+    prefix: str,
+    previous_id: str | None,
+    next_id: str | None,
+    number: int,
+    total: int,
+    on_open: Callable,
+) -> None:
+    """Previous / next buttons, disabled at either end, with "2 / 5" between them."""
+    left, middle, right = st.columns(3, vertical_alignment="center")
+    left.button(
+        "← Previous",
+        key=f"{prefix}prev",
+        disabled=previous_id is None,
+        on_click=on_open,
+        args=(previous_id,),
+        width="stretch",
+    )
+    middle.markdown(f"<div style='text-align: center'>{number} / {total}</div>",
+                    unsafe_allow_html=True)  # fmt: skip
+    right.button(
+        "Next →",
+        key=f"{prefix}next",
+        disabled=next_id is None,
+        on_click=on_open,
+        args=(next_id,),
+        width="stretch",
+    )
 
 
 def example_box(prompt: str, text: str) -> None:
