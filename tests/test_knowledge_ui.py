@@ -117,10 +117,12 @@ def test_knowledge_is_built_and_starts_in_tricks_mode():
     assert mode.value == "Tricks"
 
 
-def test_textbook_mode_is_coming_soon():
+def test_textbook_mode_shows_its_overview():
+    """Spec 010 builds Textbook mode, so it no longer shows "Coming soon"."""
     at = open_knowledge()
     at.button_group(key="kn_mode").set_value("Textbook").run()
-    assert "Coming soon" in page_text(at)
+    assert "Coming soon" not in page_text(at)
+    assert labels(at, "tb_category_")
 
 
 # --- Overview and category (KA1, KA2) ---

@@ -27,6 +27,7 @@ from knowledge import (
     start_round,
     submit_answer,
 )
+import textbook_ui
 from knowledge_content import CATEGORIES, category_of, get_category, get_trick
 from tasks import LEVELS
 from ui_components import (
@@ -34,8 +35,13 @@ from ui_components import (
     answer_flash,
     answer_focus,
     answer_form,
+    back_button,
+    card_header,
     example_box,
+    list_rows,
     pick,
+    previous_next_bar,
+    tile_grid,
 )
 
 TRICKS_MODE = "Tricks"
@@ -43,7 +49,6 @@ TEXTBOOK_MODE = "Textbook"
 DESCRIPTION = "Learn mental-math tricks step by step, then practise exactly that trick."
 PRACTICE_NOTE = f"{ROUND_LENGTH} tasks for this trick, no time limit."
 IGNORED_HINT = "Numbers only, e.g. 4250"
-TILES_PER_ROW = 3
 FLASH = {Outcome.CORRECT: "green", Outcome.WRONG: "red"}
 ROUND_KEYS = ("kn_round", "kn_round_id", "kn_rng", "kn_flash", "kn_hint", "kn_feedback")
 
@@ -143,6 +148,17 @@ def _on_again() -> None:
     _begin(result.trick_id, result.level)
 
 
+def _open_trick_from_textbook(trick_id: str) -> None:
+    """A related-trick link in an article: switch to Tricks and open that trick.
+
+    A round that was running in Tricks ends without saving, as when leaving it.
+    """
+    _clear_round()
+    state.pop("kn_result", None)
+    state.kn_mode = TRICKS_MODE
+    _open_trick(trick_id)
+
+
 def _on_back_to_trick() -> None:
     state.pop("kn_result", None)
     _clear_round()
@@ -156,35 +172,31 @@ def render_overview() -> None:
     st.header("Knowledge", anchor=False)
     st.caption(DESCRIPTION)
     st.subheader("Operations", anchor=False)
-    # One row of columns at a time, so the tiles keep the catalogue order.
-    for start in range(0, len(CATEGORIES), TILES_PER_ROW):
-        columns = st.columns(TILES_PER_ROW)
-        for column, category in zip(columns, CATEGORIES[start : start + TILES_PER_ROW]):
-            column.button(
-                f"{category.name} ({len(category.tricks)})",
-                key=f"kn_category_{category.id}",
-                on_click=_open_category,
-                args=(category.id,),
-                width="stretch",
-            )
+    tile_grid(
+        [
+            (f"{category.name} ({len(category.tricks)})", f"kn_category_{category.id}",
+             (category.id,))
+            for category in CATEGORIES
+        ],
+        _open_category,
+    )  # fmt: skip
 
 
 def render_category() -> None:
     category = get_category(state.kn_category)
-    st.button("← Back", key="kn_back", on_click=_go, args=("overview",))
+    back_button("kn_back", _go, ("overview",))
     st.header(category.name, anchor=False)
     st.caption(category.subtitle)
 
     done = practised(knowledge_db.list_rounds())
-    for trick in category.tricks:
-        tick = " ✓" if trick.id in done else ""
-        st.button(
-            f"{trick.name} · {trick.difficulty}{tick}",
-            key=f"kn_trick_{trick.id}",
-            on_click=_open_trick,
-            args=(trick.id,),
-            width="stretch",
-        )
+    list_rows(
+        [
+            (f"{trick.name} · {trick.difficulty}{' ✓' if trick.id in done else ''}",
+             f"kn_trick_{trick.id}", (trick.id,))
+            for trick in category.tricks
+        ],
+        _open_trick,
+    )  # fmt: skip
 
 
 def _steps_markdown(example) -> str:
@@ -197,16 +209,13 @@ def _steps_markdown(example) -> str:
 def render_trick() -> None:
     trick = get_trick(state.kn_trick)
     category = category_of(trick.id)
-    st.button("← Back", key="kn_back", on_click=_go, args=("category",))
+    back_button("kn_back", _go, ("category",))
     st.header(trick.name, anchor=False)
     st.caption(trick.description)
 
     for example in trick.examples:
         with st.container(border=True):
-            st.markdown(
-                f"**{example.label}**  \n"
-                f":blue-badge[{category.name}] :orange-badge[{example.difficulty}]"
-            )
+            card_header(example.label, category.name, example.difficulty)
             st.subheader(example.equation, anchor=False)
 
     if trick.note:
@@ -218,34 +227,14 @@ def render_trick() -> None:
             st.markdown(f"**{example.label}** · {example.equation}")
         st.markdown(_steps_markdown(example))
 
-    previous_id, next_id = neighbours(trick.id)
-    number, total = position(trick.id)
-    left, middle, right = st.columns(3, vertical_alignment="center")
-    left.button(
-        "← Previous",
-        key="kn_prev",
-        disabled=previous_id is None,
-        on_click=_open_trick,
-        args=(previous_id,),
-        width="stretch",
-    )
-    middle.markdown(f"<div style='text-align: center'>{number} / {total}</div>",
-                    unsafe_allow_html=True)  # fmt: skip
-    right.button(
-        "Next →",
-        key="kn_next",
-        disabled=next_id is None,
-        on_click=_open_trick,
-        args=(next_id,),
-        width="stretch",
-    )
+    previous_next_bar("kn_", *neighbours(trick.id), *position(trick.id), _open_trick)
     st.button("Practice", key="kn_practice", type="primary", on_click=_go, args=("setup",),
               width="stretch")  # fmt: skip
 
 
 def render_setup() -> None:
     trick = get_trick(state.kn_trick)
-    st.button("← Back", key="kn_back", on_click=_go, args=("trick",))
+    back_button("kn_back", _go, ("trick",))
     st.header(f"Practise: {trick.name}", anchor=False)
     st.caption(PRACTICE_NOTE)
     level = pick(st.segmented_control, "Level", LEVELS, "kn_level")
@@ -330,8 +319,7 @@ def render() -> None:
         label_visibility="collapsed",
     )  # fmt: skip
     if mode == TEXTBOOK_MODE:
-        st.header("Textbook", anchor=False)
-        st.info("Coming soon")
+        textbook_ui.render(on_open_trick=_open_trick_from_textbook)
         return
 
     if state.kn_screen == "running" and "kn_round" not in state:
