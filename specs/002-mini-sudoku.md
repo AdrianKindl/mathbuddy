@@ -17,14 +17,14 @@ Sudoku is the smallest of the four games in R4, so it comes first. Its rules
   wrong. Puzzles are generated anew for every game; there are no fixed puzzle
   lists.
 - The level sets how many cells are empty: Easy 12, Medium 16, Hard 20, Pro 24
-  (out of 36). *Proposal: the brief does not give numbers. All four are reachable
-  with a unique solution.*
+  (out of 36). The brief gives no numbers; decided in this spec. All four
+  are reachable with a unique solution.
 - The user starts with 3 lives, shown on screen throughout the game.
 - A correct entry turns green and is locked. A wrong entry flashes red, costs
   one life, and the cell stays empty.
 - An empty entry, a non-numeric entry, or a number outside 1–6 is not
-  evaluated and costs no life. *Proposal: the brief only says "wrong entry";
-  we treat these like the Tests section treats non-numeric input (MB R3).*
+  evaluated and costs no life. The brief only says "wrong entry"; this spec
+  treats these like the Tests section treats non-numeric input (MB R3).
 - Entering into a given or already locked cell does nothing.
 - With 0 lives the game is lost: "Game over" is shown together with the
   solution. When every cell is filled correctly the game is won: "You solved
