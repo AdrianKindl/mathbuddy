@@ -6,8 +6,11 @@ stand-in that records what it receives.
 
 import sqlite3
 from contextlib import closing
+from pathlib import Path
 
 import pytest
+import streamlit as st
+from streamlit import config
 
 import db
 
@@ -141,3 +144,23 @@ def test_an_error_rolls_back(fake_postgres):
             raise RuntimeError("boom")
     assert fake_postgres.last.rolled_back
     assert not fake_postgres.last.committed
+
+
+# --- Safety net: tests never see the real secrets file ---
+# Streamlit copies root keys of .streamlit/secrets.toml into the environment
+# as soon as it reads the file, which would overwrite the empty
+# MATHBUDDY_DATABASE_URL set in conftest.py. So tests must not read that file.
+
+REAL_SECRETS_FILE = Path(__file__).resolve().parent.parent / ".streamlit" / "secrets.toml"
+
+
+def test_tests_never_read_the_real_secrets_file():
+    secrets_files = [Path(path).resolve() for path in config.get_option("secrets.files")]
+    assert REAL_SECRETS_FILE not in secrets_files
+
+
+def test_reading_streamlit_secrets_keeps_the_online_database_off(monkeypatch):
+    monkeypatch.setenv("MATHBUDDY_DATABASE_URL", "")
+    st.secrets.load_if_toml_exists()
+    online = db.database_url() is not None  # never show the URL itself in test output
+    assert not online

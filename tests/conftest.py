@@ -3,7 +3,9 @@
 Two safety nets for every test:
 - Tests never touch the online database, even when `.streamlit/secrets.toml`
   holds the real connection string: MATHBUDDY_DATABASE_URL is set to empty,
-  and the app only copies the secret when the variable is not set at all.
+  and Streamlit reads an empty secrets file instead of the real one. Both are
+  needed: Streamlit copies the keys of a secrets file it reads into the
+  environment and would overwrite the empty setting.
 - Since spec 011 the app shows a sign in screen first. Every test that opens
   the app with `AppTest.from_file` starts with TEST_USER signed in, so the
   screen tests written before 011 keep working unchanged. Tests marked
@@ -13,6 +15,8 @@ Two safety nets for every test:
 from datetime import datetime, timezone
 
 import pytest
+from streamlit import config
+from streamlit.runtime.secrets import secrets_singleton
 from streamlit.testing.v1 import AppTest
 
 from accounts import User
@@ -31,8 +35,16 @@ def pytest_configure(config):
 
 
 @pytest.fixture(autouse=True)
-def never_use_the_online_database(monkeypatch):
+def never_use_the_online_database(monkeypatch, tmp_path):
     monkeypatch.setenv("MATHBUDDY_DATABASE_URL", "")
+    empty_secrets = tmp_path / "secrets.toml"
+    empty_secrets.write_text("", encoding="utf-8")
+    original_files = config.get_option("secrets.files")
+    config.set_option("secrets.files", [str(empty_secrets)])
+    secrets_singleton._reset()
+    yield
+    secrets_singleton._reset()
+    config.set_option("secrets.files", original_files)
 
 
 @pytest.fixture(autouse=True)

@@ -35,8 +35,12 @@ def database_url() -> str | None:
 def use_database_url_from(secrets: Mapping) -> None:
     """Take the online database from the app's secrets, unless the setting already exists.
 
-    An existing setting always wins, even an empty one: the tests set it to
-    empty so that a real secrets file is never used while testing.
+    An existing setting always wins, even an empty one. Note: when Streamlit
+    reads a secrets file it copies its keys into the environment itself, so in
+    the running app the setting from secrets.toml is already there. To run the
+    app locally without the online database, start it with an empty secrets
+    file: `uv run streamlit run app.py --secrets.files no-secrets.toml`.
+    The tests do the same in tests/conftest.py.
     """
     if DATABASE_URL_SETTING in os.environ:
         return
