@@ -3,7 +3,9 @@
 > Train mental arithmetic with short, varied, measurable practice.
 
 **5 sections · 4 difficulty levels · 60-second tests**
-Group project · Introduction to Programming · Version 1.0 · 3 November 2026
+Group project · Introduction to Programming · Version 1.1 · 22 November 2026
+
+> **Changes in 1.1 (spec 011, online accounts):** passwords and a shared online database are now in scope (MB05, MB R7, new MB R9, scope boundaries, extended A7, new A10).
 
 ---
 
@@ -48,7 +50,7 @@ Show one task at a time with an answer field. After submitting, the field briefl
 When the time is up, show the score (correct answers), the number of wrong and skipped tasks, the accuracy, and the highscore for this test type and level. Indicate when the run sets a new highscore.
 
 ### MB05 – Account and profile
-Let a user create an account with a username and email address, and sign in with their username. The profile shows the username, total tasks completed, accuracy, longest streak, the highscore per test type and level, and a bar chart of completed activities for each of the last 7 days (x-axis: weekdays, bars: completed activities per day).
+Let a user create an account with a username, an email address and a password (typed twice), and sign in with their username and password from any device. A user must be signed in to use the app; without a user only the sign in screen is shown. A signed in user can sign out. The profile shows the username, total tasks completed, accuracy, longest streak, the highscore per test type and level, and a bar chart of completed activities for each of the last 7 days (x-axis: weekdays, bars: completed activities per day).
 
 ---
 
@@ -87,7 +89,10 @@ Only a run that reaches the end of its 60 seconds is completed and saved. An abo
 The highscore for a test type and level is the highest score among the user's completed runs of that test type and level. A run with a lower score leaves the highscore unchanged.
 
 ### MB R7 – Accounts
-A username is 3–20 characters (letters, digits, underscore) and unique regardless of upper or lower case ("Adrian" and "adrian" are the same username). An email address must have a valid format and may belong to only one account. Each user only sees their own statistics.
+A username is 3–20 characters (letters A–Z, digits, underscore) and unique regardless of upper or lower case ("Adrian" and "adrian" are the same username). An email address must have a valid format (`name@domain.tld`, no spaces) and may belong to only one account, compared in lower case. A password has at least 8 characters and must be typed the same way twice. A rejected sign-up shows every reason that applies, and only those; when the user corrects a field, the shown reasons are updated. Passwords are never stored, only a salted hash. Signing in works with the username in any upper or lower case; a wrong username and a wrong password give the same message ("Wrong username or password"). Each user only sees their own statistics and highscores.
+
+### MB R9 – Storage
+Accounts and completed runs are stored in one shared online database, so that a user can sign in from any device and sees the same data everywhere. The connection details are secret: they are kept outside the code repository and never shown. Without connection details the app uses a local file instead, so it can be developed and tested offline. Automated tests never use the online database. Runs saved before accounts existed have no owner; they are kept but shown to nobody.
 
 ### MB R8 – Statistics and streak
 - **Tasks completed** = the number of correctly solved tasks across all completed runs.
@@ -97,7 +102,7 @@ A username is 3–20 characters (letters, digits, underscore) and unique regardl
 ---
 
 ## What the product must remember
-Save each account (username, email address, creation date). Save each completed run: user, test type, level, date and time, number of correct, wrong and skipped tasks. Highscores, totals, accuracy, streaks and the 7-day chart are calculated from the saved runs, so they always stay consistent with them after reopening the app. Tasks and their rules are generated, not stored.
+Save each account (username, email address, password hash, creation date). Save each completed run: user (owner), test type, level, date and time, number of correct, wrong and skipped tasks. Highscores, totals, accuracy, streaks and the 7-day chart are calculated from the saved runs, so they always stay consistent with them after reopening the app. Tasks and their rules are generated, not stored.
 
 ---
 
@@ -122,13 +127,16 @@ A completed Multiplication Easy run with 12 correct, 3 wrong and 2 skipped tasks
 With a Multiplication Easy highscore of 15, a new run with 12 points leaves the highscore at 15; a run with 18 points sets it to 18 and is shown as a new highscore. A run of Multiplication Medium does not change the Easy highscore.
 
 ### Scenario A7 – Accounts
-Creating the username "adrian" succeeds. A second account named "Adrian" is rejected. The email "adrian@" is rejected. An email already used by another account is rejected. A rejected sign-up creates no account.
+Creating the username "adrian" succeeds. A second account named "Adrian" is rejected. The email "adrian@" is rejected. An email already used by another account is rejected, also in other upper or lower case. A password of 7 characters is rejected; two different passwords are rejected. A short password typed twice the same way shows only the length error; a long password with a mismatch shows only the mismatch error. A rejected sign-up creates no account. "ADRIAN" can sign in as "adrian"; a wrong password and an unknown username give the same message.
 
 ### Scenario A8 – Streak
 With completed runs on Monday, Tuesday (two runs) and Wednesday, none on Thursday, and one on Friday, the longest streak is 3 days.
 
 ### Scenario A9 – 7-day activity
 With two completed runs today, one yesterday and none on the five days before, the chart shows 2 for today, 1 for yesterday and 0 for the other five days. Aborted runs do not appear.
+
+### Scenario A10 – Online accounts
+An account created on a phone through the public link can sign in on a laptop and sees the same highscores. After the online app is restarted, accounts and runs are still there. A run completed by user A does not appear in the highscores of user B. Runs without an owner appear for nobody.
 
 ---
 
@@ -164,6 +172,6 @@ All games have the four levels and 3 lives. A wrong entry costs a life; losing a
 ---
 
 ## Scope boundaries
-Email verification, passwords and secure login, password reset, leaderboards between users, payments, advertising, sound, offline mobile apps and any paid or live external service are not required. In R1, signing in by username alone is not secure; this is accepted for the course project.
+Passwords and a shared online database are in scope since version 1.1 (spec 011); the app runs on a free hosting service and a free online database. A leaderboard between users is planned (spec 013). Email verification, password reset, changing the username or password, deleting accounts, locking an account after failed sign-ins, payments, advertising, sound, offline mobile apps and any paid external service are not required.
 
-Completed runs and accounts must survive restarting the app. Rejected actions (invalid sign-ups, answers after the time limit, aborted runs) leave saved data unchanged. The core experience works with generated content and without an internet connection to external services.
+Completed runs and accounts must survive restarting the app. Rejected actions (invalid sign-ups, answers after the time limit, aborted runs) leave saved data unchanged. The core experience works with generated content. The online app needs its database; locally the app and all tests also work without an internet connection.

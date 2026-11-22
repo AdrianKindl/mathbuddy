@@ -1,11 +1,16 @@
-"""SQLite storage of completed runs.
+"""Storage of completed runs, and the database connection for every storage module.
 
 Each call opens and closes its own connection, because Streamlit may run the
 script on a different thread each time and SQLite connections stay on one thread.
+
+Locally the data lives in a SQLite file. When MATHBUDDY_DATABASE_URL is set,
+the same SQL runs on an online Postgres database instead (spec 011).
 """
 
 import os
+import re
 import sqlite3
+from collections.abc import Mapping
 from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
@@ -13,13 +18,83 @@ from pathlib import Path
 from runs import SavedRun
 
 _DEFAULT_PATH = Path(__file__).resolve().parent / "data" / "mathbuddy.db"
+DATABASE_URL_SETTING = "MATHBUDDY_DATABASE_URL"
+
+_INSERT_OR_IGNORE = re.compile(r"^\s*INSERT\s+OR\s+IGNORE\s+INTO\s+", re.IGNORECASE)
 
 
 def db_path() -> Path:
     return Path(os.environ.get("MATHBUDDY_DB") or _DEFAULT_PATH)
 
 
-def connect() -> sqlite3.Connection:
+def database_url() -> str | None:
+    """The online database, or None for the local SQLite file."""
+    return os.environ.get(DATABASE_URL_SETTING) or None
+
+
+def use_database_url_from(secrets: Mapping) -> None:
+    """Take the online database from the app's secrets, unless the setting already exists.
+
+    An existing setting always wins, even an empty one. Note: when Streamlit
+    reads a secrets file it copies its keys into the environment itself, so in
+    the running app the setting from secrets.toml is already there. To run the
+    app locally without the online database, start it with an empty secrets
+    file: `uv run streamlit run app.py --secrets.files no-secrets.toml`.
+    The tests do the same in tests/conftest.py.
+    """
+    if DATABASE_URL_SETTING in os.environ:
+        return
+    url = secrets.get(DATABASE_URL_SETTING)
+    if url:
+        os.environ[DATABASE_URL_SETTING] = url
+
+
+def to_postgres(sql: str) -> str:
+    """Translate the SQLite SQL used by the storage modules into Postgres SQL."""
+    translated = sql.replace("%", "%%").replace("?", "%s")
+    if _INSERT_OR_IGNORE.match(translated):
+        translated = _INSERT_OR_IGNORE.sub("INSERT INTO ", translated, count=1)
+        translated = translated.rstrip() + " ON CONFLICT DO NOTHING"
+    return translated
+
+
+class _PostgresConnection:
+    """Gives a Postgres connection the same small interface as sqlite3.
+
+    `with connection:` commits on success and rolls back on an error,
+    `closing(connection)` closes it, and `execute` accepts SQLite SQL.
+    """
+
+    def __init__(self, connection):
+        self._connection = connection
+
+    def execute(self, sql: str, parameters=()):
+        return self._connection.execute(to_postgres(sql), tuple(parameters))
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, error_type, error, traceback):
+        if error_type is None:
+            self._connection.commit()
+        else:
+            self._connection.rollback()
+        return False
+
+    def close(self) -> None:
+        self._connection.close()
+
+
+def _connect_postgres(url: str):
+    import psycopg  # only needed online
+
+    return psycopg.connect(url)
+
+
+def connect():
+    url = database_url()
+    if url:
+        return _PostgresConnection(_connect_postgres(url))
     path = db_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     return sqlite3.connect(path)
