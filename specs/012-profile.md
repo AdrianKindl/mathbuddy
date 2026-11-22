@@ -22,12 +22,15 @@ An **activity** is one completed:
 | Trainer session | `trainer_sessions` | yes: correct, wrong, skipped | yes |
 | Tricks practice round | `practice_rounds` | yes: correct, and 10 − correct not correct | yes |
 | Textbook practice round | `textbook_rounds` | yes: correct, and 10 − correct not correct | yes |
-| Game (Mini Sudoku, Sudoku) | `game_results` (new) | no | yes |
+| Game (Mini Sudoku, Sudoku, Number Hunt, Magic Square, Number Chain) | `game_results` (new) | no | yes |
 
 - Aborted test runs, aborted Trainer sessions and practice rounds left early
   are never saved (MB R5, existing rules), so they never count.
-- A game counts when it ends: won, or lost after losing all lives. A game
-  that is left before it ends does not count *(to confirm: lost games count)*.
+- A game counts when it ends: won, or lost after losing all lives (Number
+  Chain always ends this way, with "Game over"). A game ended with "End game"
+  (002g), or left by switching section or game before it ends, does not count
+  *(to confirm: lost games count)*. "Try again" (002h) starts a new game; the
+  game that ended before it was already saved once.
 - Practice rounds always have 10 tasks and are only saved when all 10 are
   answered, so "not correct" (wrong or skipped) is 10 − correct
   (`knowledge.ROUND_LENGTH`, `textbook.ROUND_LENGTH`). The tables keep their
@@ -84,11 +87,16 @@ The Profile section no longer shows "Coming soon". From top to bottom:
   highscore table and 7 bars of 0.
 
 ## Changes to earlier specs
-- `tests/test_app.py`: the test that expects "Coming soon" for Profile now
-  only checks Games. No other expected result changes.
-- Trainer (002), Knowledge (009), Textbook (010) and Games (002, 002b): their
-  saving code records the signed in player as owner; finished games are saved.
-  Their existing tests keep passing unchanged.
+- `tests/test_app.py`: since Games (002d) and Profile (this spec) are both
+  built, no section shows "Coming soon" any more. The parametrized
+  "Coming soon" test is replaced by `test_profile_section_is_built`, like
+  `test_games_section_is_built` from 002d.
+- Trainer (002), Knowledge (009), Textbook (010) and Games (002–002h): their
+  saving code records the signed in player as owner. Their existing tests keep
+  passing unchanged.
+- Games (002g) said "Nothing is saved (games are never saved)". Since this spec
+  a game that ends (won or lost) is saved once in `game_results`, so it counts
+  as an activity. A game ended with "End game" is still not saved.
 - `docs/product-brief.md`: MB R8 counts all activities (see below).
 
 ## Out of scope
@@ -107,8 +115,10 @@ account, password reset, email verification.
   1 skipped adds 8 tasks and 8 of 10 to the accuracy; a Tricks round with
   7 correct adds 7 tasks and 7 of 10; a finished game adds one activity but no
   tasks. Each adds 1 to today's bar.
-- **Never counted:** an aborted Trainer session, a practice round left early
-  and a game left before it ends change nothing.
+- **Never counted:** an aborted Trainer session, a practice round left early,
+  and a game ended with "End game" or left before it ends change nothing.
+- **Every game:** a won or lost game of each of the five games adds one
+  activity, saved with the game name.
 - **A6 – Highscore:** the profile table uses `runs.highscores` and shows the
   same highscores as the Tests tab, per test type and level.
 - **A8 – Streak:** activities on Monday (a test), Tuesday (a Trainer session

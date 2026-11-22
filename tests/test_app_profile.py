@@ -8,6 +8,7 @@ Textbook practice, and finished games.
 
 import io
 import time
+from contextlib import closing
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -283,3 +284,55 @@ def test_all_kinds_together_on_the_profile():
         "Longest streak": "1 day",
     }
     assert chart_bars(at)[-1][1] == 3
+
+
+# --- All five games (002–002h): finished games count, "End game" never ---
+
+
+def lose_any_game(choice):
+    """Start the chosen game and lose all three lives, as in the Games tests."""
+    at = tests_tab.start_any_game(choice)
+    if choice in ("Mini Sudoku", "Sudoku"):
+        tests_tab.lose_sudoku(at, size=6 if choice == "Mini Sudoku" else 9)
+    elif choice == "Number Hunt":
+        for _ in range(3):
+            tests_tab.hunt_step(at, *tests_tab.invalid_hunt_step(at))
+    elif choice == "Magic Square":
+        row, col, right = tests_tab.first_empty_magic_cell(at)
+        for _ in range(3):
+            tests_tab.magic_enter(at, row, col, tests_tab.wrong_magic_number(at, right))
+    else:  # Number Chain
+        for _ in range(3):
+            result = at.session_state["chain"].chain.result
+            tests_tab.show_chain(at)
+            tests_tab.answer_chain(at, str(result + 1))
+    assert "Game over" in tests_tab.page_text(at)
+    return at
+
+
+def saved_game_names():
+    with closing(db.connect()) as connection:
+        return [row[0] for row in connection.execute("SELECT game FROM game_results")]
+
+
+@pytest.mark.parametrize("choice", list(tests_tab.GAME_STATE_KEYS))
+def test_every_game_that_ends_counts_once_with_its_name(choice, fast_sleep):
+    at = lose_any_game(choice)
+    at.run()
+    assert [a.kind for a in my_activities()] == [Kind.GAME]
+    assert saved_game_names() == [choice]
+
+
+@pytest.mark.parametrize("choice", list(tests_tab.GAME_STATE_KEYS))
+def test_a_game_ended_with_end_game_never_counts(choice):
+    at = tests_tab.start_any_game(choice)
+    at.button(key="end_game").click().run()
+    assert not at.exception
+    assert my_activities() == []
+
+
+def test_try_again_after_game_over_saves_the_next_game_separately(fast_sleep):
+    at = lose_any_game("Mini Sudoku")
+    at.button(key="try_again").click().run()
+    tests_tab.lose_sudoku(at)
+    assert [a.kind for a in my_activities()] == [Kind.GAME, Kind.GAME]
