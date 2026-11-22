@@ -11,6 +11,7 @@ import random
 
 import streamlit as st
 
+import activity_db
 import knowledge_db
 import textbook_ui
 from knowledge import (
@@ -27,6 +28,7 @@ from knowledge import (
 )
 from knowledge_content import CATEGORIES, category_of, get_category, get_trick
 from practice_ui import Practice
+from stats import Kind
 from tasks import LEVELS
 from ui_components import (
     EXAMPLE_SEED,
@@ -62,13 +64,20 @@ def _show_feedback(attempt) -> None:
         st.warning(f"Skipped {task.text}. The answer is {task.answer:,}.")
 
 
+
+def save_owned_round(round_id, practice_round, finished_at) -> None:
+    """Save the completed round and record the signed in player (spec 012)."""
+    knowledge_db.save_round(round_id, practice_round, finished_at)
+    activity_db.assign_owner(Kind.TRICKS, round_id, state.user.id)
+
+
 PRACTICE = Practice(
     "kn_",
     start_round=start_round,
     submit_answer=submit_answer,
     skip_task=skip_task,
     current_task=current_task,
-    save_round=knowledge_db.save_round,
+    save_round=save_owned_round,
     item_of=lambda practice_round: practice_round.trick_id,
     item_screen="trick",
     back_label="Back to trick",

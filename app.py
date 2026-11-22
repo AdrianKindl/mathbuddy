@@ -6,11 +6,13 @@ import secrets
 import time
 import uuid
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import streamlit as st
 
 import accounts_db
+import activity_db
 import db
 import magicsquare
 import numberchain
@@ -35,6 +37,8 @@ from runs import (
     submit_answer,
 )
 from leaderboard import MIN_SCORE, TOP, Row, build
+from stats import accuracy as overall_accuracy
+from stats import last_7_days, longest_streak, tasks_completed
 from tasks import LEVELS, TEST_TYPES, generate_task
 from accounts import (
     SIGN_IN_FAILED,
@@ -64,6 +68,8 @@ NO_VALUE = "–"
 LEADERBOARD_COLUMNS = ["Rank", "Player", "Score"]  # MB06: no date shown
 LEADERBOARD_EMPTY = "No runs yet for this operation and level."
 OWN_ROW_STYLE = "background-color: rgba(255, 75, 75, 0.15); font-weight: 600"
+APP_TIME_ZONE = ZoneInfo("Europe/Lisbon")  # calendar days for streak and chart (spec 012)
+PROFILE_EMPTY = "Complete a test, training, practice round or game to see your statistics here."
 IGNORED_HINT = "Numbers only, e.g. 4250"
 LIVES = sudoku.LIVES
 SUDOKU_VARIANTS = {"Mini Sudoku": sudoku.MINI, "Sudoku": sudoku.CLASSIC}
@@ -322,7 +328,7 @@ def clear_game() -> None:
         del state[key]  # no old entries in the next grid's fields
     for name in (
         "game", "hunt", "hunt_message", "magic", "magic_pick", "magic_message",
-        "chain", "chain_rng", "chain_phase", "chain_feedback", "chain_hint",
+        "chain", "chain_rng", "chain_phase", "chain_feedback", "chain_hint", "game_id",
     ):
         state.pop(name, None)
     state.game_flash = None
@@ -331,7 +337,7 @@ def clear_game() -> None:
 
 
 def on_end_game() -> None:
-    """Like "End training" in the Trainer: the game ends and nothing is saved (spec 002g)."""
+    """Like "End training" in the Trainer: the game ends and is not saved (spec 002g, 012)."""
     clear_game()
 
 
@@ -358,6 +364,7 @@ def on_try_again() -> None:
         state.game = sudoku.Game(
             level=game.level, puzzle=game.puzzle, grid=game.puzzle.givens, started_at=utc_now()
         )
+    state.game_id = str(uuid.uuid4())  # a new game, saved on its own when it ends
 
 
 def current_game():
@@ -369,7 +376,16 @@ def current_game():
 
 
 def on_game_change() -> None:
-    clear_game()  # nothing is saved, so the old game simply ends
+    clear_game()  # a game that has not ended is not saved, so it simply ends
+
+
+def save_game_if_over() -> None:
+    """A game that ended (won or lost) counts as an activity; saved once (spec 012)."""
+    game = current_game()
+    if game is None or game.status == "running" or "game_id" not in state:
+        return
+    choice = state.get("game_choice", GAMES[0])
+    activity_db.save_game(state.game_id, state.user.id, choice, game.level, utc_now(), str(game.status))
 
 
 def on_new_game() -> None:
@@ -386,6 +402,7 @@ def on_new_game() -> None:
     else:
         variant = SUDOKU_VARIANTS[choice]
         state.game = sudoku.start_game(state.game_level, random.Random(), variant, utc_now())
+    state.game_id = str(uuid.uuid4())
 
 
 def on_cell(row: int, col: int) -> None:
@@ -490,6 +507,11 @@ def render_select() -> None:
     example_box(EXAMPLE_PROMPT, example.text)
     st.button("Start", key="start", type="primary", on_click=on_start)
 
+    render_highscores()
+
+
+def render_highscores() -> None:
+    """The signed in player's highscores (MB R6), on the Tests tab and the Profile."""
     st.subheader("Highscores", anchor=False)
     best = highscores(own_runs())
     st.table(
@@ -530,6 +552,35 @@ def render_leaderboard(operation: str, level: str) -> None:
         lambda line: [OWN_ROW_STYLE if marked[line.name] else ""] * len(line), axis=1
     ).hide(axis="index")
     st.table(styled)
+
+
+def days_text(days: int) -> str:
+    return f"{days} day" if days == 1 else f"{days} days"
+
+
+def render_profile() -> None:
+    """MB05: the signed in player's statistics, calculated from saved activities (MB R8)."""
+    st.header("Profile", anchor=False)
+    st.markdown(state.user.username.replace("_", "\\_"))  # "_" would turn text italic
+    activities = activity_db.list_activities_for(state.user.id)
+    share = overall_accuracy(activities)
+    tasks_column, accuracy_column, streak_column = st.columns(3)
+    tasks_column.metric("Tasks completed", str(tasks_completed(activities)))
+    accuracy_column.metric("Accuracy", NO_VALUE if share is None else f"{round(100 * share)}%")
+    streak_column.metric("Longest streak", days_text(longest_streak(activities, APP_TIME_ZONE)))
+    if not activities:
+        st.info(PROFILE_EMPTY)
+
+    render_highscores()
+
+    st.subheader("Last 7 days", anchor=False)
+    today = datetime.now(APP_TIME_ZONE).date()
+    days = last_7_days(activities, today, APP_TIME_ZONE)
+    chart = pd.DataFrame(
+        {"Activities": [count for _, count in days]},
+        index=[day.strftime("%a") for day, _ in days],
+    )
+    st.bar_chart(chart, x_label="Day", y_label="Activities", sort=False)
 
 
 def render_countdown() -> None:
@@ -1148,6 +1199,7 @@ def render_games() -> None:
         render_sudoku(state.game)
 
     # Every game's Status has RUNNING = "running"; compared by value, as in runs.py.
+    save_game_if_over()
     game = current_game()
     if game is not None and game.status == "running":
         st.button("End game", key="end_game", on_click=on_end_game)
@@ -1168,6 +1220,7 @@ def main() -> None:
         use_online_database()
         db.init_db()
         accounts_db.init_db()
+        activity_db.init_db()
         state.phase = "select"
 
     if "user" not in state:
@@ -1191,6 +1244,8 @@ def main() -> None:
         knowledge_ui.render()
     elif section == "Games":
         render_games()
+    elif section == "Profile":
+        render_profile()
     else:
         render_coming_soon(section)
 
