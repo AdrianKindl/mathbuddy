@@ -3,8 +3,10 @@
 > Train mental arithmetic with short, varied, measurable practice.
 
 **5 sections · 4 difficulty levels · 60-second tests**
-Group project · Introduction to Programming · Version 1.1 · 22 November 2026
+Group project · Introduction to Programming · Version 1.2 · 22 November 2026
 
+> **Changes in 1.2 (spec 012, profile):** MB R8 counts all completed activities (Tests, Trainer, Knowledge practice, Games) for the streak and the 7-day chart; tasks and accuracy include Tests, Trainer and Knowledge practice.
+>
 > **Changes in 1.1 (spec 011, online accounts):** passwords and a shared online database are now in scope (MB05, MB R7, new MB R9, scope boundaries, extended A7, new A10).
 
 ---
@@ -95,14 +97,18 @@ A username is 3–20 characters (letters A–Z, digits, underscore) and unique r
 Accounts and completed runs are stored in one shared online database, so that a user can sign in from any device and sees the same data everywhere. The connection details are secret: they are kept outside the code repository and never shown. Without connection details the app uses a local file instead, so it can be developed and tested offline. Automated tests never use the online database. Runs saved before accounts existed have no owner; they are kept but shown to nobody.
 
 ### MB R8 – Statistics and streak
-- **Tasks completed** = the number of correctly solved tasks across all completed runs.
-- **Activity** = one completed run. The 7-day chart covers today and the six days before it; days without activity show 0.
-- **Streak** = consecutive calendar days with at least one completed run. Several runs on one day count as one day. The profile shows the longest streak.
+- **Activity** = one completed test run, finished Trainer session, completed practice round (Tricks or Textbook) or finished game (won or lost). Aborted runs and sessions, rounds left early and games left before they end are not activities.
+- **Tasks completed** = the number of correctly solved tasks across all completed test runs, Trainer sessions and practice rounds. Games add no tasks.
+- **Accuracy** = correct ÷ (correct + wrong + skipped) across the same test runs, Trainer sessions and practice rounds.
+- **7-day chart** = activities per day for today and the six days before it; days without activity show 0.
+- **Streak** = consecutive calendar days with at least one activity. Several activities on one day count as one day. The profile shows the longest streak.
+- **Calendar day** = the day in the app time zone, Europe/Lisbon.
+- **Highscores** are about test runs only (MB R6).
 
 ---
 
 ## What the product must remember
-Save each account (username, email address, password hash, creation date). Save each completed run: user (owner), test type, level, date and time, number of correct, wrong and skipped tasks. Highscores, totals, accuracy, streaks and the 7-day chart are calculated from the saved runs, so they always stay consistent with them after reopening the app. Tasks and their rules are generated, not stored.
+Save each account (username, email address, password hash, creation date). Save each completed run: user (owner), test type, level, date and time, number of correct, wrong and skipped tasks. Save the owner of every other completed activity (Trainer session, practice round) and each finished game (user, game, level, date and time, won or lost). Highscores, totals, accuracy, streaks and the 7-day chart are calculated from the saved runs, so they always stay consistent with them after reopening the app. Tasks and their rules are generated, not stored.
 
 ---
 
