@@ -15,6 +15,7 @@ from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
 
+from leaderboard import Entry
 from runs import SavedRun
 
 _DEFAULT_PATH = Path(__file__).resolve().parent / "data" / "mathbuddy.db"
@@ -162,3 +163,27 @@ def list_runs() -> list[SavedRun]:
         )
         for row in rows
     ]
+
+
+def leaderboard_entries(test_type: str, level: str) -> list[Entry]:
+    """One entry per owned run of this test type and level (MB R10, spec 013).
+
+    Read-only: runs, their owners (run_owners) and the usernames (users) are
+    already stored, so nothing new is saved. Runs without an owner are left out
+    by the join. Only the username is read, never the email address.
+    """
+    with closing(connect()) as connection:
+        rows = connection.execute(
+            "SELECT run_owners.user_id, users.username, runs.correct, runs.finished_at "
+            "FROM runs "
+            "JOIN run_owners ON run_owners.run_id = runs.id "
+            "JOIN users ON users.id = run_owners.user_id "
+            "WHERE runs.test_type = ? AND runs.level = ? "
+            "ORDER BY runs.finished_at, runs.id",
+            (test_type, level),
+        ).fetchall()
+    return [
+        Entry(user_id=row[0], username=row[1], value=row[2],
+              achieved_at=datetime.fromisoformat(row[3]))
+        for row in rows
+    ]  # fmt: skip
