@@ -117,7 +117,7 @@ def test_tests_is_the_first_screen_and_is_built():
     assert "Coming soon" not in page_text(at)
 
 
-@pytest.mark.parametrize("section", ["Games", "Profile"])
+@pytest.mark.parametrize("section", ["Games"])  # Profile is built since spec 012
 def test_other_sections_show_coming_soon(section):
     at = open_app()
     go_to(at, section)
