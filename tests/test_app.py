@@ -118,11 +118,10 @@ def test_tests_is_the_first_screen_and_is_built():
     assert "Coming soon" not in page_text(at)
 
 
-@pytest.mark.parametrize("section", ["Profile"])
-def test_other_sections_show_coming_soon(section):
+def test_profile_section_is_built():  # since spec 012; Games is built since 002d
     at = open_app()
-    go_to(at, section)
-    assert "Coming soon" in page_text(at)
+    go_to(at, "Profile")
+    assert "Coming soon" not in page_text(at)
 
 
 def test_games_section_is_built():
@@ -329,7 +328,7 @@ def test_aborted_run_saves_nothing_and_returns_to_the_tests_screen(fast_sleep):
 def test_leaving_the_section_during_a_run_saves_nothing(fast_sleep):
     at = start_test(open_app())
     go_to(at, "Profile")
-    assert "Coming soon" in page_text(at)
+    assert at.radio(key="nav").value == "Profile"  # left the run; Profile is built since 012
     go_to(at, "Tests")
 
     assert db.list_runs() == []

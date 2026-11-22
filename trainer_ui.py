@@ -14,7 +14,9 @@ from datetime import datetime, timezone
 import pandas as pd
 import streamlit as st
 
+import activity_db
 import trainer_db
+from stats import Kind
 from tasks import LEVELS
 from ui_components import (
     EXAMPLE_SEED,
@@ -161,6 +163,7 @@ def _clear_session() -> None:
 def _finish(session: Session) -> None:
     """Save the session and prepare the result. Safe to repeat for the same session."""
     trainer_db.save_session(state.tr_session_id, session)
+    activity_db.assign_owner(Kind.TRAINER, state.tr_session_id, state.user.id)  # spec 012
     # When the time ran out, the task on screen was never answered.
     unanswered = None if session.end_reason == EndReason.ALL_TASKS_DONE else state.tr_task
     state.tr_result = {"session": session, "unanswered": unanswered}
