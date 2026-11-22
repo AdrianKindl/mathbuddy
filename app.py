@@ -331,6 +331,31 @@ def on_end_game() -> None:
     clear_game()
 
 
+def on_try_again() -> None:
+    """After Game over: the same puzzle again with 3 lives (spec 002h)."""
+    hunt = state.get("hunt")
+    magic = state.get("magic")
+    chain = state.get("chain")
+    game = state.get("game")
+    clear_game()
+    if hunt is not None:
+        state.hunt = numberhunt.Game(
+            level=hunt.level, puzzle=hunt.puzzle, numbers=hunt.puzzle.numbers
+        )
+    elif magic is not None:
+        state.magic = magicsquare.Game(
+            level=magic.level, puzzle=magic.puzzle, grid=magic.puzzle.givens
+        )
+    elif chain is not None:  # a chain has no fixed puzzle: start over at the same level
+        state.chain_rng = random.Random()
+        state.chain = numberchain.start_game(chain.level, state.chain_rng)
+        state.chain_phase = "ready"
+    elif game is not None:
+        state.game = sudoku.Game(
+            level=game.level, puzzle=game.puzzle, grid=game.puzzle.givens, started_at=utc_now()
+        )
+
+
 def current_game():
     """The game that is shown, whichever kind it is, or None."""
     for key in ("hunt", "magic", "chain", "game"):
@@ -1093,7 +1118,8 @@ def render_games() -> None:
     game = current_game()
     if game is not None and game.status == "running":
         st.button("End game", key="end_game", on_click=on_end_game)
-
+    elif game is not None and game.status == "lost":
+        st.button("Try again", key="try_again", type="primary", on_click=on_try_again)
 
 def use_online_database() -> None:
     """Copy the online database setting from .streamlit/secrets.toml, if there is one."""

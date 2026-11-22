@@ -1039,3 +1039,102 @@ def test_number_chain_can_be_ended_while_answering(fast_sleep):
     at.button(key="end_game").click().run()
     assert not at.exception
     assert "chain" not in at.session_state
+
+
+
+# --- Games: Try again (spec 002h) ---
+
+
+def has_try_again_button(at):
+    return any(button.key == "try_again" for button in at.button)
+
+
+def lose_sudoku(at, size=6):
+    row, col, right = first_empty_cell(at)
+    for _ in range(3):
+        enter(at, row, col, str(right % size + 1))
+
+
+def test_try_again_replays_the_same_sudoku_with_three_lives():
+    at = start_game()
+    puzzle = at.session_state["game"].puzzle
+    lose_sudoku(at)
+    assert "Game over" in page_text(at)
+    assert has_try_again_button(at)
+
+    at.button(key="try_again").click().run()
+    assert not at.exception
+    game = at.session_state["game"]
+    assert game.puzzle == puzzle
+    assert game.grid == puzzle.givens
+    assert game.lives == 3
+    assert game.status == "running"
+    assert metrics(at)["Lives"] == "3"
+    assert len(cell_keys(at)) == EMPTY_CELLS["Easy"]
+    assert not has_try_again_button(at)
+
+
+def test_try_again_replays_the_same_9x9_sudoku():
+    at = start_sudoku()
+    puzzle = at.session_state["game"].puzzle
+    lose_sudoku(at, size=9)
+    at.button(key="try_again").click().run()
+    assert not at.exception
+    assert at.session_state["game"].puzzle == puzzle
+    assert len(at.session_state["game"].grid) == 9
+
+
+def test_try_again_replays_the_same_number_hunt():
+    at = start_hunt()
+    puzzle = at.session_state["hunt"].puzzle
+    for _ in range(3):
+        hunt_step(at, *invalid_hunt_step(at))
+    assert "Game over" in page_text(at)
+    at.button(key="try_again").click().run()
+    assert not at.exception
+    game = at.session_state["hunt"]
+    assert game.puzzle == puzzle
+    assert game.numbers == puzzle.numbers
+    assert game.steps == ()
+    assert game.lives == 3
+
+
+def test_try_again_replays_the_same_magic_square():
+    at = start_magic()
+    puzzle = at.session_state["magic"].puzzle
+    row, col, right = first_empty_magic_cell(at)
+    for _ in range(3):
+        magic_enter(at, row, col, wrong_magic_number(at, right))
+    assert "Game over" in page_text(at)
+    at.button(key="try_again").click().run()
+    assert not at.exception
+    game = at.session_state["magic"]
+    assert game.puzzle == puzzle
+    assert game.grid == puzzle.givens
+    assert game.lives == 3
+
+
+def test_try_again_starts_number_chain_over_at_the_same_level(fast_sleep):
+    at = start_chain_game("Medium")
+    for _ in range(3):
+        result = at.session_state["chain"].chain.result
+        show_chain(at)
+        answer_chain(at, str(result + 1))
+    assert "Game over" in page_text(at)
+    at.button(key="try_again").click().run()
+    assert not at.exception
+    game = at.session_state["chain"]
+    assert game.level == "Medium"
+    assert game.score == 0
+    assert game.lives == 3
+    assert at.session_state["chain_phase"] == "ready"
+
+
+def test_running_and_solved_games_have_no_try_again_button():
+    at = start_game()
+    assert not has_try_again_button(at)
+    for _ in range(EMPTY_CELLS["Easy"]):
+        row, col, right = first_empty_cell(at)
+        enter(at, row, col, str(right))
+    assert "You solved it!" in page_text(at)
+    assert not has_try_again_button(at)
