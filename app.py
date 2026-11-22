@@ -343,13 +343,13 @@ def on_new_game() -> None:
         state.chain_phase = "ready"
     else:
         variant = SUDOKU_VARIANTS[choice]
-        state.game = sudoku.start_game(state.game_level, random.Random(), variant)
+        state.game = sudoku.start_game(state.game_level, random.Random(), variant, utc_now())
 
 
 def on_cell(row: int, col: int) -> None:
     key = cell_key(row, col)
     raw = state[key]
-    game, outcome = sudoku.enter_number(state.game, row, col, raw)
+    game, outcome = sudoku.enter_number(state.game, row, col, raw, utc_now())
     state.game = game
     state[key] = ""  # a wrong or invalid entry leaves the field empty again
     state.game_attempt = state.get("game_attempt", 0) + 1
@@ -570,6 +570,12 @@ SUDOKU_CSS = """<style>
     font-weight: 600;
 }
 .sudoku-given { background: rgba(128, 128, 128, 0.18); }
+.st-key-sudoku_header [data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; }
+.st-key-sudoku_header [data-testid="stColumn"] {
+    min-width: 0 !important;
+    width: auto !important;
+    flex: 1 1 0 !important;
+}
 .sudoku-correct { background: rgb(22, 163, 74); color: white; }
 .sudoku-missed { border: 2px dashed rgb(220, 38, 38); color: rgb(220, 38, 38); }
 </style>"""
@@ -654,9 +660,28 @@ def render_lives(lives: int) -> None:
     st.caption("❤️" * lives + "🤍" * (LIVES - lives))
 
 
+@st.fragment(run_every="1s")
+def render_sudoku_clock() -> None:
+    """Only this part refreshes every second, so typing into the grid is not disturbed."""
+    game = state.get("game")
+    if game is None:
+        return
+    seconds = sudoku.elapsed_seconds(game, utc_now())
+    st.metric("Time", NO_VALUE if seconds is None else sudoku.clock_text(seconds))
+
+
 def render_sudoku(game: sudoku.Game) -> None:
     variant = sudoku.variant_of(game.grid)
-    render_lives(game.lives)
+    with st.container(key="sudoku_header"):
+        lives_column, time_column = st.columns(2)
+        with lives_column:
+            render_lives(game.lives)
+        with time_column:
+            if game.status == sudoku.Status.RUNNING:
+                render_sudoku_clock()
+            else:  # the stopwatch has stopped: no need to refresh it
+                seconds = sudoku.elapsed_seconds(game, utc_now())
+                st.metric("Time", NO_VALUE if seconds is None else sudoku.clock_text(seconds))
 
     if game.status == sudoku.Status.WON:
         st.success("You solved it!")
