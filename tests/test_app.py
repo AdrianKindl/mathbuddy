@@ -6,6 +6,7 @@ flash, cursor focus, the field clearing after submit, cancelling during the
 countdown, and a real Ctrl+C restart.
 """
 
+import re
 import time
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
@@ -117,11 +118,16 @@ def test_tests_is_the_first_screen_and_is_built():
     assert "Coming soon" not in page_text(at)
 
 
-@pytest.mark.parametrize("section", ["Games"])  # Profile is built since spec 012
-def test_other_sections_show_coming_soon(section):
+def test_profile_section_is_built():  # since spec 012; Games is built since 002d
     at = open_app()
-    go_to(at, section)
-    assert "Coming soon" in page_text(at)
+    go_to(at, "Profile")
+    assert "Coming soon" not in page_text(at)
+
+
+def test_games_section_is_built():
+    at = open_app()
+    go_to(at, "Games")
+    assert "Coming soon" not in page_text(at)
 
 
 # --- Tests screen (decision 11) ---
@@ -494,7 +500,6 @@ def test_games_section_lists_all_four_games():
     text = page_text(at)
     for game in GAMES:
         assert game in text
-    assert "Coming soon" in text  # for the three games that are not built yet
 
 
 def test_games_section_offers_the_four_levels():
@@ -628,3 +633,507 @@ def test_changing_the_game_ends_the_current_one():
     assert not at.exception
     assert "game" not in at.session_state
     assert not cell_keys(at)
+
+
+# --- Games: Number Hunt (spec 002c) ---
+
+
+def start_hunt(level="Easy"):
+    at = open_app()
+    go_to(at, "Games")
+    at.selectbox(key="game_choice").set_value("Number Hunt").run()
+    assert not at.exception
+    at.selectbox(key="game_level").set_value(level)
+    at.button(key="new_game").click().run()
+    assert not at.exception
+    return at
+
+
+HUNT_OP_KEYS = {"+": "plus", "−": "minus", "×": "times", "÷": "divide"}
+
+
+def hunt_step(at, first, op, second):
+    """Tap number, operation, number, by their positions in the current numbers."""
+    at.button(key=f"hunt_num_{first}").click().run()
+    at.button(key=f"hunt_op_{HUNT_OP_KEYS[op]}").click().run()
+    at.button(key=f"hunt_num_{second}").click().run()
+    assert not at.exception
+
+
+def play_hunt_step(at, step):
+    numbers = at.session_state["hunt"].numbers
+    first = numbers.index(step.a)
+    second = next(k for k, n in enumerate(numbers) if n == step.b and k != first)
+    hunt_step(at, first, step.op, second)
+
+
+def invalid_hunt_step(at):
+    """Positions of a step that is never allowed: the smaller number minus the larger."""
+    numbers = at.session_state["hunt"].numbers
+    small = min(range(len(numbers)), key=lambda k: numbers[k])
+    large = next(k for k in range(len(numbers)) if k != small and numbers[k] >= numbers[small])
+    return small, "−", large
+
+
+def test_games_picker_offers_number_hunt():
+    at = open_app()
+    go_to(at, "Games")
+    assert "Number Hunt" in at.selectbox(key="game_choice").options
+
+
+@pytest.mark.parametrize("level, count", [("Easy", 3), ("Medium", 4), ("Hard", 5), ("Pro", 6)])
+def test_new_hunt_shows_target_numbers_and_three_lives(level, count):
+    at = start_hunt(level)
+    game = at.session_state["hunt"]
+    assert metrics(at)["Target"] == str(game.puzzle.target)
+    assert metrics(at)["Lives"] == "3"
+    labels = [at.button(key=f"hunt_num_{k}").label for k in range(count)]
+    assert labels == [str(n) for n in game.puzzle.numbers]
+
+
+def test_valid_hunt_step_is_shown_and_keeps_the_lives():
+    at = start_hunt()
+    step = at.session_state["hunt"].puzzle.solution[0]
+    play_hunt_step(at, step)
+    game = at.session_state["hunt"]
+    assert game.steps == (step,)
+    assert len(game.numbers) == 2
+    assert metrics(at)["Lives"] == "3"
+
+
+def test_invalid_hunt_step_lowers_the_lives():
+    at = start_hunt()
+    hunt_step(at, *invalid_hunt_step(at))
+    assert metrics(at)["Lives"] == "2"
+    assert at.session_state["hunt"].steps == ()
+
+
+def test_hunt_undo_costs_a_life():
+    at = start_hunt()
+    play_hunt_step(at, at.session_state["hunt"].puzzle.solution[0])
+    at.button(key="hunt_undo").click().run()
+    assert not at.exception
+    assert metrics(at)["Lives"] == "2"
+    assert at.session_state["hunt"].steps == ()
+
+
+def test_playing_the_solution_shows_you_found_it():
+    at = start_hunt("Medium")
+    for step in at.session_state["hunt"].puzzle.solution:
+        play_hunt_step(at, step)
+    assert "You found it!" in page_text(at)
+    assert metrics(at)["Lives"] == "3"
+
+
+def test_three_invalid_hunt_steps_show_game_over():
+    at = start_hunt()
+    for _ in range(3):
+        hunt_step(at, *invalid_hunt_step(at))
+    assert "Game over" in page_text(at)
+
+
+def test_changing_the_game_ends_the_hunt():
+    at = start_hunt()
+    at.selectbox(key="game_choice").set_value("Sudoku").run()
+    assert not at.exception
+    assert "hunt" not in at.session_state
+
+
+# --- Games: Magic Square (spec 002d) ---
+
+MAGIC_EMPTY_CELLS = {"Easy": 4, "Medium": 6, "Hard": 7, "Pro": 10}
+
+
+def start_magic(level="Easy"):
+    at = open_app()
+    go_to(at, "Games")
+    at.selectbox(key="game_choice").set_value("Magic Square").run()
+    assert not at.exception
+    at.selectbox(key="game_level").set_value(level)
+    at.button(key="new_game").click().run()
+    assert not at.exception
+    return at
+
+
+def magic_cell_keys(at):
+    return {b.key for b in at.button if b.key and b.key.startswith("magic_cell_")}
+
+
+def magic_keypad(at):
+    return [int(b.label) for b in at.button if b.key and b.key.startswith("magic_key_")]
+
+
+def first_empty_magic_cell(at):
+    game = at.session_state["magic"]
+    for r, row in enumerate(game.grid):
+        for c, value in enumerate(row):
+            if value == 0:
+                return r, c, game.puzzle.solution[r][c]
+    raise AssertionError("no empty cell")
+
+
+def magic_enter(at, row, col, value):
+    at.button(key=f"magic_cell_{row}_{col}").click().run()
+    at.button(key=f"magic_key_{value}").click().run()
+    assert not at.exception
+
+
+def wrong_magic_number(at, right):
+    return next(n for n in magic_keypad(at) if n != right)
+
+
+def test_games_picker_offers_all_four_games():
+    at = open_app()
+    go_to(at, "Games")
+    options = list(at.selectbox(key="game_choice").options)
+    assert options[: len(GAMES)] == GAMES  # the four R4 games, in the brief's order
+
+
+@pytest.mark.parametrize("level", LEVELS)
+def test_new_magic_square_shows_target_cells_keypad_and_lives(level):
+    at = start_magic(level)
+    game = at.session_state["magic"]
+    assert metrics(at)["Target sum"] == str(game.puzzle.target)
+    assert metrics(at)["Lives"] == "3"
+    assert len(magic_cell_keys(at)) == MAGIC_EMPTY_CELLS[level]
+    expected = sorted(
+        game.puzzle.solution[r][c]
+        for r in range(len(game.grid))
+        for c in range(len(game.grid))
+        if game.grid[r][c] == 0
+    )
+    assert magic_keypad(at) == expected
+
+
+def test_magic_correct_number_locks_the_cell_and_leaves_the_keypad():
+    at = start_magic()
+    row, col, right = first_empty_magic_cell(at)
+    magic_enter(at, row, col, right)
+    assert f"magic_cell_{row}_{col}" not in magic_cell_keys(at)
+    assert right not in magic_keypad(at)
+    assert metrics(at)["Lives"] == "3"
+
+
+def test_magic_wrong_number_lowers_the_lives():
+    at = start_magic()
+    row, col, right = first_empty_magic_cell(at)
+    magic_enter(at, row, col, wrong_magic_number(at, right))
+    assert metrics(at)["Lives"] == "2"
+    assert f"magic_cell_{row}_{col}" in magic_cell_keys(at)
+
+
+def test_magic_keypad_without_a_cell_asks_for_a_cell():
+    at = start_magic()
+    number = magic_keypad(at)[0]
+    at.button(key=f"magic_key_{number}").click().run()
+    assert not at.exception
+    assert metrics(at)["Lives"] == "3"
+    assert any("Tap an empty cell first" in w.value for w in at.warning)
+
+
+def test_magic_three_wrong_numbers_show_game_over():
+    at = start_magic()
+    row, col, right = first_empty_magic_cell(at)
+    for _ in range(3):
+        magic_enter(at, row, col, wrong_magic_number(at, right))
+    assert "Game over" in page_text(at)
+    assert not magic_cell_keys(at)
+
+
+def test_magic_solving_shows_you_solved_it():
+    at = start_magic("Hard")
+    for _ in range(MAGIC_EMPTY_CELLS["Hard"]):
+        row, col, right = first_empty_magic_cell(at)
+        magic_enter(at, row, col, right)
+    assert "You solved it!" in page_text(at)
+    assert metrics(at)["Lives"] == "3"
+
+
+# --- Games: Number Chain (spec 002e) ---
+
+
+def start_chain_game(level="Easy"):
+    at = open_app()
+    go_to(at, "Games")
+    at.selectbox(key="game_choice").set_value("Number Chain").run()
+    assert not at.exception
+    at.selectbox(key="game_level").set_value(level)
+    at.button(key="new_game").click().run()
+    assert not at.exception
+    return at
+
+
+def show_chain(at):
+    """Start the chain; with fast_sleep the steps run by in a moment."""
+    at.button(key="chain_start").click().run()
+    assert not at.exception
+
+
+def answer_chain(at, text):
+    at.text_input(key="chain_answer").input(text)
+    at.button(key="chain_submit").click().run()
+    assert not at.exception
+
+
+def test_games_picker_offers_number_chain():
+    at = open_app()
+    go_to(at, "Games")
+    assert "Number Chain" in at.selectbox(key="game_choice").options
+
+
+def test_new_chain_game_shows_lives_score_and_a_start_button():
+    at = start_chain_game()
+    assert metrics(at)["Lives"] == "3"
+    assert metrics(at)["Score"] == "0"
+    assert metrics(at)["Steps"] == "4"
+    assert at.button(key="chain_start").label == "Start chain"
+
+
+def test_chain_steps_are_followed_by_an_answer_field(fast_sleep):
+    at = start_chain_game()
+    show_chain(at)
+    assert at.text_input(key="chain_answer") is not None
+    assert at.session_state["chain_phase"] == "answer"
+
+
+def test_right_chain_result_raises_the_score(fast_sleep):
+    at = start_chain_game()
+    result = at.session_state["chain"].chain.result
+    show_chain(at)
+    answer_chain(at, str(result))
+    assert metrics(at)["Score"] == "1"
+    assert metrics(at)["Steps"] == "5"
+    assert "Right!" in page_text(at)
+    assert at.button(key="chain_start").label == "Next chain"
+
+
+def test_wrong_chain_result_costs_a_life_and_shows_the_result(fast_sleep):
+    at = start_chain_game()
+    result = at.session_state["chain"].chain.result
+    show_chain(at)
+    answer_chain(at, str(result + 1))
+    assert metrics(at)["Lives"] == "2"
+    assert any(str(result) in w.value for w in at.warning)
+
+
+def test_non_numeric_chain_answer_changes_nothing(fast_sleep):
+    at = start_chain_game()
+    show_chain(at)
+    answer_chain(at, "abc")
+    assert metrics(at)["Lives"] == "3"
+    assert at.session_state["chain_phase"] == "answer"
+
+
+def test_three_wrong_chain_results_show_game_over(fast_sleep):
+    at = start_chain_game()
+    for _ in range(3):
+        result = at.session_state["chain"].chain.result
+        show_chain(at)
+        answer_chain(at, str(result + 1))
+    assert "Game over" in page_text(at)
+    assert "You solved 0 chains" in page_text(at)
+
+
+# --- Games: Sudoku stopwatch (spec 002f) ---
+
+CLOCK = re.compile(r"\d+:\d\d(:\d\d)?")
+
+
+def test_new_mini_sudoku_shows_a_running_clock():
+    at = start_game()
+    assert CLOCK.fullmatch(metrics(at)["Time"])
+    assert at.session_state["game"].started_at is not None
+
+
+def test_new_sudoku_shows_a_running_clock():
+    at = start_sudoku()
+    assert CLOCK.fullmatch(metrics(at)["Time"])
+
+
+def test_solved_sudoku_shows_the_final_time():
+    at = start_game()
+    for _ in range(EMPTY_CELLS["Easy"]):
+        row, col, right = first_empty_cell(at)
+        enter(at, row, col, str(right))
+    assert "You solved it!" in page_text(at)
+    assert at.session_state["game"].ended_at is not None
+    assert CLOCK.fullmatch(metrics(at)["Time"])
+
+
+# --- Games: End game (spec 002g) ---
+
+GAME_STATE_KEYS = {
+    "Mini Sudoku": "game",
+    "Sudoku": "game",
+    "Number Hunt": "hunt",
+    "Magic Square": "magic",
+    "Number Chain": "chain",
+}
+
+
+def start_any_game(choice):
+    at = open_app()
+    go_to(at, "Games")
+    at.selectbox(key="game_choice").set_value(choice).run()
+    assert not at.exception
+    at.button(key="new_game").click().run()
+    assert not at.exception
+    return at
+
+
+def has_end_button(at):
+    return any(button.key == "end_game" for button in at.button)
+
+
+@pytest.mark.parametrize("choice", list(GAME_STATE_KEYS))
+def test_running_game_can_be_ended(choice):
+    at = start_any_game(choice)
+    assert GAME_STATE_KEYS[choice] in at.session_state
+    assert has_end_button(at)
+    assert at.button(key="end_game").label == "End game"
+
+    at.button(key="end_game").click().run()
+    assert not at.exception
+    assert GAME_STATE_KEYS[choice] not in at.session_state
+    assert not cell_keys(at)
+    assert not magic_cell_keys(at)
+    assert not has_end_button(at)
+    assert any(button.key == "new_game" for button in at.button)
+
+
+def test_new_game_after_ending_starts_fresh():
+    at = start_any_game("Mini Sudoku")
+    row, col, right = first_empty_cell(at)
+    enter(at, row, col, str(right % 6 + 1))  # lose a life first
+    at.button(key="end_game").click().run()
+    at.button(key="new_game").click().run()
+    assert not at.exception
+    assert metrics(at)["Lives"] == "3"
+    assert len(cell_keys(at)) == EMPTY_CELLS["Easy"]
+    assert has_end_button(at)
+
+
+def test_lost_game_has_no_end_button():
+    at = start_game()
+    row, col, right = first_empty_cell(at)
+    for _ in range(3):
+        enter(at, row, col, wrong_digit(right))
+    assert "Game over" in page_text(at)
+    assert not has_end_button(at)
+
+
+def test_solved_game_has_no_end_button():
+    at = start_game()
+    for _ in range(EMPTY_CELLS["Easy"]):
+        row, col, right = first_empty_cell(at)
+        enter(at, row, col, str(right))
+    assert "You solved it!" in page_text(at)
+    assert not has_end_button(at)
+
+
+def test_number_chain_can_be_ended_while_answering(fast_sleep):
+    at = start_chain_game()
+    show_chain(at)
+    assert at.session_state["chain_phase"] == "answer"
+    at.button(key="end_game").click().run()
+    assert not at.exception
+    assert "chain" not in at.session_state
+
+
+
+# --- Games: Try again (spec 002h) ---
+
+
+def has_try_again_button(at):
+    return any(button.key == "try_again" for button in at.button)
+
+
+def lose_sudoku(at, size=6):
+    row, col, right = first_empty_cell(at)
+    for _ in range(3):
+        enter(at, row, col, str(right % size + 1))
+
+
+def test_try_again_replays_the_same_sudoku_with_three_lives():
+    at = start_game()
+    puzzle = at.session_state["game"].puzzle
+    lose_sudoku(at)
+    assert "Game over" in page_text(at)
+    assert has_try_again_button(at)
+
+    at.button(key="try_again").click().run()
+    assert not at.exception
+    game = at.session_state["game"]
+    assert game.puzzle == puzzle
+    assert game.grid == puzzle.givens
+    assert game.lives == 3
+    assert game.status == "running"
+    assert metrics(at)["Lives"] == "3"
+    assert len(cell_keys(at)) == EMPTY_CELLS["Easy"]
+    assert not has_try_again_button(at)
+
+
+def test_try_again_replays_the_same_9x9_sudoku():
+    at = start_sudoku()
+    puzzle = at.session_state["game"].puzzle
+    lose_sudoku(at, size=9)
+    at.button(key="try_again").click().run()
+    assert not at.exception
+    assert at.session_state["game"].puzzle == puzzle
+    assert len(at.session_state["game"].grid) == 9
+
+
+def test_try_again_replays_the_same_number_hunt():
+    at = start_hunt()
+    puzzle = at.session_state["hunt"].puzzle
+    for _ in range(3):
+        hunt_step(at, *invalid_hunt_step(at))
+    assert "Game over" in page_text(at)
+    at.button(key="try_again").click().run()
+    assert not at.exception
+    game = at.session_state["hunt"]
+    assert game.puzzle == puzzle
+    assert game.numbers == puzzle.numbers
+    assert game.steps == ()
+    assert game.lives == 3
+
+
+def test_try_again_replays_the_same_magic_square():
+    at = start_magic()
+    puzzle = at.session_state["magic"].puzzle
+    row, col, right = first_empty_magic_cell(at)
+    for _ in range(3):
+        magic_enter(at, row, col, wrong_magic_number(at, right))
+    assert "Game over" in page_text(at)
+    at.button(key="try_again").click().run()
+    assert not at.exception
+    game = at.session_state["magic"]
+    assert game.puzzle == puzzle
+    assert game.grid == puzzle.givens
+    assert game.lives == 3
+
+
+def test_try_again_starts_number_chain_over_at_the_same_level(fast_sleep):
+    at = start_chain_game("Medium")
+    for _ in range(3):
+        result = at.session_state["chain"].chain.result
+        show_chain(at)
+        answer_chain(at, str(result + 1))
+    assert "Game over" in page_text(at)
+    at.button(key="try_again").click().run()
+    assert not at.exception
+    game = at.session_state["chain"]
+    assert game.level == "Medium"
+    assert game.score == 0
+    assert game.lives == 3
+    assert at.session_state["chain_phase"] == "ready"
+
+
+def test_running_and_solved_games_have_no_try_again_button():
+    at = start_game()
+    assert not has_try_again_button(at)
+    for _ in range(EMPTY_CELLS["Easy"]):
+        row, col, right = first_empty_cell(at)
+        enter(at, row, col, str(right))
+    assert "You solved it!" in page_text(at)
+    assert not has_try_again_button(at)
