@@ -91,6 +91,10 @@ The Profile section no longer shows "Coming soon". From top to bottom:
   built, no section shows "Coming soon" any more. The parametrized
   "Coming soon" test is replaced by `test_profile_section_is_built`, like
   `test_games_section_is_built` from 002d.
+- `tests/test_app.py::test_leaving_the_section_during_a_run_saves_nothing`
+  checked "Coming soon" on the Profile only to see that the run was left. It
+  now checks that the Profile section is shown instead. What the test is about
+  (leaving a run saves nothing) is unchanged.
 - Trainer (002), Knowledge (009), Textbook (010) and Games (002–002h): their
   saving code records the signed in player as owner. Their existing tests keep
   passing unchanged.

@@ -328,7 +328,7 @@ def test_aborted_run_saves_nothing_and_returns_to_the_tests_screen(fast_sleep):
 def test_leaving_the_section_during_a_run_saves_nothing(fast_sleep):
     at = start_test(open_app())
     go_to(at, "Profile")
-    assert "Coming soon" in page_text(at)
+    assert at.radio(key="nav").value == "Profile"  # left the run; Profile is built since 012
     go_to(at, "Tests")
 
     assert db.list_runs() == []

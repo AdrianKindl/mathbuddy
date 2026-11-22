@@ -173,7 +173,7 @@ def test_highscore_table_is_the_same_as_on_the_tests_tab():
     tests_tab.go_to(at, "Profile")
     on_profile = highscore_table(at)
     assert on_profile.equals(on_tests_tab)
-    assert on_profile.loc["Multiplication", "Easy"] == 15
+    assert on_profile.loc["Multiplication", "Easy"] == "15"  # cells are text, like "–"
 
 
 def test_activities_of_other_players_and_without_owner_change_nothing():
