@@ -89,18 +89,30 @@ def own_runs():
 # --- Accounts (spec 011) ---
 
 
+def current_sign_up_problems() -> list[str]:
+    username = state.get("signup_username", "").strip()
+    email = normalize_email(state.get("signup_email", ""))
+    return sign_up_problems(
+        username,
+        email,
+        state.get("signup_password", ""),
+        state.get("signup_repeat", ""),
+        username_taken=accounts_db.username_taken(username),
+        email_taken=accounts_db.email_taken(email),
+    )
+
+
+def on_sign_up_field_change() -> None:
+    """Shown sign up errors follow the fields, so only errors that apply stay."""
+    if state.get("account_errors") and state.account_errors != [SIGN_IN_FAILED]:
+        state.account_errors = current_sign_up_problems()
+
+
 def on_sign_up() -> None:
     username = state.signup_username.strip()
     email = normalize_email(state.signup_email)
     password = state.signup_password
-    problems = sign_up_problems(
-        username,
-        email,
-        password,
-        state.signup_repeat,
-        username_taken=accounts_db.username_taken(username),
-        email_taken=accounts_db.email_taken(email),
-    )
+    problems = current_sign_up_problems()
     if not problems:
         user = User(
             id=str(uuid.uuid4()),
@@ -112,14 +124,7 @@ def on_sign_up() -> None:
         try:
             accounts_db.create_user(user)
         except ValueError:  # taken in the meantime by someone else
-            problems = sign_up_problems(
-                username,
-                email,
-                password,
-                state.signup_repeat,
-                username_taken=accounts_db.username_taken(username),
-                email_taken=accounts_db.email_taken(email),
-            )
+            problems = current_sign_up_problems()
         else:
             sign_in_as(user)
             return
@@ -154,10 +159,11 @@ def render_sign_in() -> None:
         st.text_input("Password", type="password", key="signin_password")
         st.button("Sign in", key="signin_submit", type="primary", on_click=on_sign_in)
     with sign_up_tab:
-        st.text_input("Username", key="signup_username", max_chars=20)
-        st.text_input("Email", key="signup_email")
-        st.text_input("Password", type="password", key="signup_password")
-        st.text_input("Repeat password", type="password", key="signup_repeat")
+        changed = on_sign_up_field_change
+        st.text_input("Username", key="signup_username", max_chars=20, on_change=changed)
+        st.text_input("Email", key="signup_email", on_change=changed)
+        st.text_input("Password", type="password", key="signup_password", on_change=changed)
+        st.text_input("Repeat password", type="password", key="signup_repeat", on_change=changed)
         st.caption(PASSWORD_HINT)
         st.button("Create account", key="signup_submit", type="primary", on_click=on_sign_up)
     for message in state.get("account_errors", []):

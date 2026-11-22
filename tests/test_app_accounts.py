@@ -176,6 +176,48 @@ def test_different_passwords_are_rejected():
     assert accounts_db.find_user("adrian") is None
 
 
+# Review of PR #14: only the password errors that actually apply are shown.
+
+
+def test_short_password_typed_twice_shows_only_the_length_error():
+    at = sign_up(open_app(), password="short12", repeat="short12")
+    assert errors(at) == [PASSWORD_TOO_SHORT]
+
+
+def test_long_passwords_that_differ_show_only_the_mismatch_error():
+    at = sign_up(open_app(), password="longpassword1", repeat="longpassword2")
+    assert errors(at) == [PASSWORDS_DIFFER]
+
+
+def change_field(at, key, value):
+    """Type into a field and leave it (Enter), without clicking Create account."""
+    at.text_input(key=key).input(value)
+    return at.run()
+
+
+def test_errors_follow_a_corrected_repeat_without_a_new_click():
+    at = sign_up(open_app(), password="short12", repeat="short13")
+    assert errors(at) == [PASSWORD_TOO_SHORT, PASSWORDS_DIFFER]
+    at = change_field(at, "signup_repeat", "short12")
+    assert errors(at) == [PASSWORD_TOO_SHORT]
+
+
+def test_errors_follow_a_corrected_length_without_a_new_click():
+    at = sign_up(open_app(), password="short12", repeat="short13")
+    at = change_field(at, "signup_password", "longpassword1")
+    at = change_field(at, "signup_repeat", "longpassword2")
+    assert errors(at) == [PASSWORDS_DIFFER]
+
+
+def test_errors_disappear_when_everything_is_corrected_but_no_account_yet():
+    at = sign_up(open_app(), password="short12", repeat="short13")
+    at = change_field(at, "signup_password", "longpassword1")
+    at = change_field(at, "signup_repeat", "longpassword1")
+    assert errors(at) == []
+    assert not is_signed_in(at)
+    assert accounts_db.find_user("adrian") is None
+
+
 def test_spaces_around_username_and_email_are_ignored():
     at = sign_up(open_app(), " adrian ", " Adrian@Example.com ")
     assert is_signed_in(at)
