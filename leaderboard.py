@@ -11,6 +11,7 @@ from datetime import datetime
 from enum import StrEnum
 
 TOP = 15
+MIN_SCORE = 1  # Tests: only highscores of at least 1 count (MB R10)
 
 
 class Better(StrEnum):
@@ -56,15 +57,21 @@ def build(
     better: Better = Better.HIGHER,
     top: int = TOP,
     user_id: str | None = None,
+    at_least: int | float | None = None,
 ) -> Board:
-    """Rank users by their best entry, each user once (MB R10)."""
+    """Rank users by their best entry, each user once (MB R10).
+
+    With `at_least`, a user whose best value is below it does not appear at
+    all, so they get no own row either.
+    """
     best: dict[str, Entry] = {}
     for entry in entries:
         current = best.get(entry.user_id)
         if current is None or _order(entry, better) < _order(current, better):
             best[entry.user_id] = entry
 
-    ranked = sorted(best.values(), key=lambda entry: _order(entry, better))
+    counted = [e for e in best.values() if at_least is None or e.value >= at_least]
+    ranked = sorted(counted, key=lambda entry: _order(entry, better))
     rows = [
         Row(rank, entry.user_id, entry.username, entry.value, entry.achieved_at,
             is_you=user_id is not None and entry.user_id == user_id)

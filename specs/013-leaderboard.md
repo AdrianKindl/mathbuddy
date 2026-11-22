@@ -15,9 +15,9 @@ Tests screen shows the best players and where the signed-in player stands.
 - On the Tests screen, below the Highscores, a section **Leaderboard** with the
   caption "All-time top 15 · <operation> · <level>". It follows the Operation
   and Level buttons above it and changes when the selection changes.
-- A table with the columns Rank, Player, Score, Date (the date the score was
-  first reached, `YYYY-MM-DD`, UTC). It uses the same table style as the
-  Highscores.
+- A table with the columns Rank, Player, Score (MB06). It uses the same table
+  style as the Highscores. The time a score was reached is not shown; it only
+  decides the order of equal scores (review of 013: no Date column).
 - The signed-in player's row is marked "<username> (you)" (and highlighted).
   If they rank below 15, a row "…" follows the top 15, then their own row with
   their real rank. Without a run of this operation and level there is no own row.
@@ -28,6 +28,8 @@ Tests screen shows the best players and where the signed-in player stands.
 - One all-time leaderboard per test type and level, of all users.
 - Each user appears at most once, with their best score (MB R6) of that test
   type and level. If they reached that score more than once, the earliest time counts.
+- Only highscores of at least 1 count: a user whose best score is 0 does not
+  appear and gets no own row (review of 013).
 - Runs without an owner (saved before spec 011) are not included.
 - Higher scores rank first. Equal scores: the earlier date and time ranks
   first. Equal score and identical time: usernames in alphabetical order,
@@ -39,7 +41,10 @@ Tests screen shows the best players and where the signed-in player stands.
 - `leaderboard.py` (rule module, no Streamlit, no SQL, no clock): `Entry`
   (user id, username, value, achieved at), `Row` (rank, user id, username,
   value, achieved at, is_you), `Board` (top rows, own row or None), and
-  `build(entries, *, better=Better.HIGHER, top=15, user_id=None)`.
+  `build(entries, *, better=Better.HIGHER, top=15, user_id=None, at_least=None)`.
+  `at_least` leaves out users whose best value is below it; Tests passes
+  `MIN_SCORE` (1). The leaderboard query stays in `db.py` (moving it to
+  `accounts_db.py` is a later refactor).
   `Better.LOWER` ranks smaller values first (for example a fastest time in a
   game later); Tests always uses `Better.HIGHER`. Nothing in it is specific to Tests.
 - `db.py`: `leaderboard_entries(test_type, level)` returns one `Entry` per
@@ -78,6 +83,9 @@ or `run_owners` tables, Trainer, Knowledge or Games.
 - **A13 – Separate and private:** a Multiplication Medium run does not appear
   on the Multiplication Easy leaderboard; runs without an owner appear on no
   leaderboard; no email address appears on the screen.
+- **At least 1:** a player whose only run has 0 correct answers does not
+  appear and has no own row; a player with a best score of 1 appears.
+- **Columns:** the table shows Rank, Player and Score only.
 - **Lower is better:** the rule module ranks smaller values first with
   `Better.LOWER`, with the same tie-break.
 - **Both databases:** all tests pass on SQLite; the Postgres test for

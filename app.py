@@ -34,7 +34,7 @@ from runs import (
     start_run,
     submit_answer,
 )
-from leaderboard import TOP, Row, build
+from leaderboard import MIN_SCORE, TOP, Row, build
 from tasks import LEVELS, TEST_TYPES, generate_task
 from accounts import (
     SIGN_IN_FAILED,
@@ -61,7 +61,7 @@ PASSWORD_HINT = "Use a password you don't use anywhere else."
 TESTS_DESCRIPTION = "Solve as many tasks as you can in 60 seconds. Only correct answers count."
 EXAMPLE_PROMPT = "Calculate"  # the Trainer's prompt for the basic operations
 NO_VALUE = "–"
-LEADERBOARD_COLUMNS = ["Rank", "Player", "Score", "Date"]
+LEADERBOARD_COLUMNS = ["Rank", "Player", "Score"]  # MB06: no date shown
 LEADERBOARD_EMPTY = "No runs yet for this operation and level."
 OWN_ROW_STYLE = "background-color: rgba(255, 75, 75, 0.15); font-weight: 600"
 IGNORED_HINT = "Numbers only, e.g. 4250"
@@ -506,15 +506,16 @@ def render_select() -> None:
 
 def leaderboard_cells(row: Row) -> list[str]:
     player = f"{row.username} (you)" if row.is_you else row.username
-    date = row.achieved_at.astimezone(timezone.utc).strftime("%Y-%m-%d")
-    return [str(row.rank), player, str(row.value), date]
+    return [str(row.rank), player, str(row.value)]
 
 
 def render_leaderboard(operation: str, level: str) -> None:
     """MB06: the all-time leaderboard for the selected operation and level."""
     st.subheader("Leaderboard", anchor=False)
     st.caption(f"All-time top {TOP} · {operation} · {level}")
-    board = build(db.leaderboard_entries(operation, level), user_id=state.user.id)
+    board = build(
+        db.leaderboard_entries(operation, level), user_id=state.user.id, at_least=MIN_SCORE
+    )
     if not board.top:
         st.caption(LEADERBOARD_EMPTY)
         return
@@ -522,7 +523,7 @@ def render_leaderboard(operation: str, level: str) -> None:
     rows = [leaderboard_cells(row) for row in board.top]
     marked = [row.is_you for row in board.top]
     if board.own is not None:  # the signed-in user ranks below the top 15
-        rows += [["…", "", "", ""], leaderboard_cells(board.own)]
+        rows += [["…", "", ""], leaderboard_cells(board.own)]
         marked += [False, True]
     frame = pd.DataFrame(rows, columns=LEADERBOARD_COLUMNS)
     styled = frame.style.apply(

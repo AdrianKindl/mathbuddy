@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from leaderboard import TOP, Better, Board, Entry, Row, build
+from leaderboard import MIN_SCORE, TOP, Better, Board, Entry, Row, build
 
 ROOT = Path(__file__).resolve().parent.parent
 MONDAY = datetime(2026, 11, 16, 12, 0, tzinfo=timezone.utc)
@@ -122,6 +122,32 @@ def test_the_size_of_the_top_can_be_changed():
     board = build(players(8), top=5, user_id="p07")
     assert [row.rank for row in board.top] == [1, 2, 3, 4, 5]
     assert board.own.rank == 7
+
+
+# --- Only highscores of at least 1 count (MB R10, review of 013) ---
+
+
+def test_tests_count_only_highscores_of_at_least_1():
+    assert MIN_SCORE == 1
+
+
+def test_a_best_value_below_the_minimum_is_left_out_and_gives_no_own_row():
+    entries = [entry("lena", 0), entry("lena", 0, TUESDAY), entry("mia", 1)] + players(20)
+    board = build(entries, at_least=MIN_SCORE, user_id="lena")
+    assert "lena" not in [row.user_id for row in board.top]
+    assert board.own is None
+    assert build([entry("lena", 0), entry("mia", 1)], at_least=1, user_id="lena").top == (
+        Row(rank=1, user_id="mia", username="mia", value=1, achieved_at=MONDAY, is_you=False),
+    )
+
+
+def test_one_good_run_is_enough_even_after_runs_of_0():
+    board = build([entry("mia", 0, MONDAY), entry("mia", 3, TUESDAY)], at_least=1)
+    assert ranking(board) == [(1, "mia", 3)]
+
+
+def test_without_a_minimum_every_value_counts():
+    assert ranking(build([entry("lena", 0)])) == [(1, "lena", 0)]
 
 
 # --- Ready for "lower is better" (later game leaderboards) ---

@@ -19,7 +19,7 @@ from conftest import TEST_USER
 APP = Path(__file__).resolve().parent.parent / "app.py"
 MONDAY = datetime(2026, 11, 16, 12, 0, tzinfo=timezone.utc)
 CREATED = datetime(2026, 11, 1, tzinfo=timezone.utc)
-COLUMNS = ["Rank", "Player", "Score", "Date"]
+COLUMNS = ["Rank", "Player", "Score"]  # MB06: no Date column (review of 013)
 
 
 @pytest.fixture(autouse=True)
@@ -83,7 +83,7 @@ def test_leaderboard_follows_the_highscores_and_the_selection():
     subheaders = [s.value for s in at.subheader]
     assert subheaders.index("Leaderboard") > subheaders.index("Highscores")
     assert "All-time top 15 · Multiplication · Easy" in [c.value for c in at.caption]
-    assert board(at) == [["1", "Adrian", "12", "2026-11-16"]]
+    assert board(at) == [["1", "Adrian", "12"]]
 
 
 def test_changing_the_selection_changes_the_leaderboard():
@@ -96,7 +96,7 @@ def test_changing_the_selection_changes_the_leaderboard():
     at.button_group(key="level").set_value("Pro")
     at.run()
     assert "All-time top 15 · Division · Pro" in [c.value for c in at.caption]
-    assert board(at) == [["1", "Adrian", "7", "2026-11-16"]]
+    assert board(at) == [["1", "Adrian", "7"]]
 
 
 def test_empty_leaderboard_shows_a_message_and_no_table():
@@ -117,9 +117,9 @@ def test_order_and_tie_break_by_the_earlier_date():
     add_run("adrian", 18, "u2", when=MONDAY + timedelta(days=1))
     add_run("lena", 15, "u3", when=MONDAY)
     assert board(open_tests()) == [
-        ["1", "Mia", "18", "2026-11-16"],
-        ["2", "Adrian", "18", "2026-11-17"],
-        ["3", "Lena", "15", "2026-11-16"],
+        ["1", "Mia", "18"],
+        ["2", "Adrian", "18"],
+        ["3", "Lena", "15"],
     ]
 
 
@@ -142,8 +142,8 @@ def test_own_row_below_the_top_15():
     rows = board(open_tests())
     assert len(rows) == 17
     assert [row[0] for row in rows[:15]] == [str(n) for n in range(1, 16)]
-    assert rows[15] == ["…", "", "", ""]
-    assert rows[16] == ["19", "tester (you)", "82", "2026-11-16"]
+    assert rows[15] == ["…", "", ""]
+    assert rows[16] == ["19", "tester (you)", "82"]
 
 
 def test_own_row_inside_the_top_15_is_marked_and_not_repeated():
@@ -152,7 +152,7 @@ def test_own_row_inside_the_top_15_is_marked_and_not_repeated():
     add_run("mine", 1000, TEST_USER.id)
     rows = board(open_tests())
     assert len(rows) == 15
-    assert rows[0] == ["1", "tester (you)", "1000", "2026-11-16"]
+    assert rows[0] == ["1", "tester (you)", "1000"]
     assert sum("(you)" in row[1] for row in rows) == 1
 
 
@@ -165,6 +165,19 @@ def test_own_run_of_another_level_gives_no_own_row():
     assert not any("(you)" in row[1] for row in rows)
 
 
+def test_a_best_score_of_0_does_not_appear_and_gives_no_own_row():
+    """MB R10 (review of 013): only highscores of at least 1 count."""
+    add_user("u1", "Lena")
+    add_user("u2", "Mia")
+    add_me()
+    add_run("lena", 0, "u1")  # Lena's only run: 0 correct
+    add_run("mia", 1, "u2")  # Mia's best score is 1
+    add_run("mine", 0, TEST_USER.id)  # the signed-in user's only run: 0 correct
+    rows = board(open_tests())
+    assert rows == [["1", "Mia", "1"]]
+    assert not any("(you)" in row[1] for row in rows)
+
+
 # --- Separate and private (A13) ---
 
 
@@ -174,14 +187,14 @@ def test_operation_and_level_are_kept_separate():
     add_run("easy", 12, "u1", level="Easy")
     add_run("medium", 30, "u2", level="Medium")
     add_run("addition", 40, "u2", test_type="Addition", level="Easy")
-    assert board(open_tests("Multiplication", "Easy")) == [["1", "Adrian", "12", "2026-11-16"]]
+    assert board(open_tests("Multiplication", "Easy")) == [["1", "Adrian", "12"]]
 
 
 def test_runs_without_an_owner_are_not_shown():
     add_user("u1", "Adrian")
     add_run("owned", 12, "u1")
     add_run("old", 99, None)
-    assert board(open_tests()) == [["1", "Adrian", "12", "2026-11-16"]]
+    assert board(open_tests()) == [["1", "Adrian", "12"]]
 
 
 def test_no_email_address_is_shown():
