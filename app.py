@@ -12,6 +12,7 @@ import streamlit as st
 
 import accounts_db
 import db
+import magicsquare
 import numberhunt
 import sudoku
 import trainer_ui
@@ -61,8 +62,7 @@ NO_VALUE = "–"
 IGNORED_HINT = "Numbers only, e.g. 4250"
 LIVES = sudoku.LIVES
 SUDOKU_VARIANTS = {"Mini Sudoku": sudoku.MINI, "Sudoku": sudoku.CLASSIC}
-GAMES = [*SUDOKU_VARIANTS, "Number Hunt"]
-COMING_SOON_GAMES = ["Magic Square"]
+GAMES = [*SUDOKU_VARIANTS, "Number Hunt", "Magic Square"]
 HUNT_OPERATIONS = {"plus": "+", "minus": "−", "times": "×", "divide": "÷"}
 GAME_RULES = {
     "Mini Sudoku": (
@@ -79,6 +79,11 @@ GAME_RULES = {
         "numbers are replaced by their result. You win when the last number left is the "
         "target. Results must be whole numbers above 0, and × or ÷ by 1 is not allowed. "
         "A step that breaks these rules, Undo and Reset each cost one of your 3 lives."
+    ),
+    "Magic Square": (
+        "Fill the grid so that every row, every column and both diagonals add up to the "
+        "target sum. Tap an empty cell, then a number: the keypad only offers the numbers "
+        "you still need. A wrong number costs one of your 3 lives."
     ),
 }
 
@@ -305,7 +310,7 @@ def cell_key(row: int, col: int) -> str:
 def clear_game() -> None:
     for key in [key for key in state if str(key).startswith("cell_")]:
         del state[key]  # no old entries in the next grid's fields
-    for name in ("game", "hunt", "hunt_message"):
+    for name in ("game", "hunt", "hunt_message", "magic", "magic_pick", "magic_message"):
         state.pop(name, None)
     state.game_flash = None
     state.game_hint = False
@@ -321,6 +326,8 @@ def on_new_game() -> None:
     choice = state.get("game_choice", GAMES[0])
     if choice == "Number Hunt":
         state.hunt = numberhunt.start_game(state.game_level, random.Random())
+    elif choice == "Magic Square":
+        state.magic = magicsquare.start_game(state.game_level, random.Random())
     else:
         variant = SUDOKU_VARIANTS[choice]
         state.game = sudoku.start_game(state.game_level, random.Random(), variant)
@@ -373,6 +380,25 @@ def on_hunt_undo() -> None:
 
 def on_hunt_reset() -> None:
     hunt_after(*numberhunt.reset(state.hunt), None)
+
+
+def on_magic_cell(row: int, col: int) -> None:
+    # Tapping the selected cell again unselects it.
+    state.magic_pick = None if state.get("magic_pick") == (row, col) else (row, col)
+    state.magic_message = None
+
+
+def on_magic_key(value: int) -> None:
+    cell = state.get("magic_pick")
+    if cell is None:
+        state.magic_message = "Tap an empty cell first."
+        return
+    game, outcome = magicsquare.enter_number(state.magic, *cell, value)
+    state.magic = game
+    state.magic_pick = None
+    state.magic_message = None
+    state.game_attempt = state.get("game_attempt", 0) + 1
+    state.game_flash = cell if outcome == magicsquare.Outcome.WRONG else None
 
 
 # --- Screens ---
@@ -762,15 +788,138 @@ def render_hunt(game: numberhunt.Game) -> None:
     render_hunt_flash()
 
 
+MAGIC_CSS = """<style>
+.st-key-magic_header [data-testid="stHorizontalBlock"],
+.st-key-magic_grid [data-testid="stHorizontalBlock"] {
+    flex-wrap: nowrap !important;
+    gap: 0.4rem;
+}
+.st-key-magic_header [data-testid="stColumn"],
+.st-key-magic_grid [data-testid="stColumn"] {
+    min-width: 0 !important;
+    width: auto !important;
+    flex: 1 1 0 !important;
+}
+.st-key-magic_grid { gap: 0.4rem; }
+.st-key-magic_grid button, .st-key-magic_grid .sudoku-cell { height: 3.2rem; min-height: 3.2rem; }
+.st-key-magic_grid button p, .st-key-magic_grid .sudoku-cell,
+.st-key-magic_keypad button p {
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+.st-key-magic_keypad [data-testid="stHorizontalBlock"] {
+    flex-wrap: wrap !important;
+    gap: 0.4rem;
+}
+.st-key-magic_keypad [data-testid="stColumn"] {
+    min-width: 0 !important;
+    width: auto !important;
+    flex: 0 0 3.4rem !important;
+}
+.st-key-magic_keypad button { min-height: 3rem; padding: 0; }
+/* The selected cell is blue: red means a wrong entry. */
+.st-key-magic_grid button[kind="primary"] {
+    background: rgb(37, 99, 235);
+    border-color: rgb(37, 99, 235);
+    color: white;
+}
+</style>"""
+
+
+def render_magic_flash() -> None:
+    cell = state.get("game_flash")
+    if not isinstance(cell, tuple):
+        return
+    name = f"magic-flash-{state.game_attempt}"
+    red = FLASH_COLORS["red"]
+    st.html(
+        f"""<style>
+        @keyframes {name} {{
+            0%, 60% {{
+                background-color: {red};
+                border-color: {red};
+                box-shadow: 0 0 0 3px {red}, 0 0 14px 4px {red};
+            }}
+        }}
+        .st-key-magic_cell_{cell[0]}_{cell[1]} button {{
+            animation: {name} {FLASH_MS}ms ease-out;
+        }}
+        </style>"""
+    )
+
+
+def render_magic(game: magicsquare.Game) -> None:
+    size = len(game.grid)
+    running = game.status == magicsquare.Status.RUNNING
+    st.html(SUDOKU_CSS + MAGIC_CSS + f"<style>.st-key-magic_grid {{ max-width: {size * 4.6}rem; }}</style>")
+
+    with st.container(key="magic_header"):
+        target_column, lives_column = st.columns(2)
+        with target_column:
+            st.metric("Target sum", game.puzzle.target)
+        with lives_column:
+            render_lives(game.lives)
+
+    if game.status == magicsquare.Status.WON:
+        st.success("You solved it!")
+    elif game.status == magicsquare.Status.LOST:
+        st.markdown(
+            "### :red[Game over]\nNo lives left. The missing numbers are shown in red."
+        )
+    elif state.get("magic_message"):
+        st.warning(state.magic_message)
+    elif state.get("magic_pick") is None:
+        st.caption("Tap an empty cell.")
+    else:
+        st.caption("Now tap the number for the blue cell.")
+
+    pick = state.get("magic_pick")
+    with st.container(key="magic_grid"):
+        for row in range(size):
+            columns = st.columns(size)
+            for col in range(size):
+                given = game.puzzle.givens[row][col]
+                value = game.grid[row][col]
+                if given or value:
+                    kind = "given" if given else "correct"
+                    columns[col].html(f'<div class="sudoku-cell sudoku-{kind}">{value}</div>')
+                elif not running:
+                    missed = game.puzzle.solution[row][col]
+                    columns[col].html(f'<div class="sudoku-cell sudoku-missed">{missed}</div>')
+                else:
+                    columns[col].button(
+                        "?",
+                        key=f"magic_cell_{row}_{col}",
+                        type="primary" if pick == (row, col) else "secondary",
+                        on_click=on_magic_cell,
+                        args=(row, col),
+                        width="stretch",
+                    )
+
+    if running:
+        numbers = magicsquare.keypad(game)
+        with st.container(key="magic_keypad"):
+            columns = st.columns(len(numbers))
+            for column, number in zip(columns, numbers):
+                column.button(
+                    str(number),
+                    key=f"magic_key_{number}",
+                    on_click=on_magic_key,
+                    args=(number,),
+                    width="stretch",
+                )
+    render_magic_flash()
+
+
 def render_games() -> None:
     st.header("Games", anchor=False)
     choice = st.selectbox("Game", GAMES, key="game_choice", on_change=on_game_change)
     st.subheader(choice, anchor=False)
-    st.caption(f"Games: {', '.join(GAMES)} · Coming soon: {', '.join(COMING_SOON_GAMES)}")
+    st.caption(f"Games: {', '.join(GAMES)}")
     st.markdown(GAME_RULES[choice])
 
     level_column, button_column = st.columns([2, 1], vertical_alignment="bottom")
-    game = state.get("game") or state.get("hunt")
+    game = state.get("game") or state.get("hunt") or state.get("magic")
     level_column.selectbox(
         "Level",
         LEVELS,
@@ -786,6 +935,8 @@ def render_games() -> None:
     # Decided by the state key, not isinstance: Streamlit re-imports changed modules.
     if "hunt" in state:
         render_hunt(state.hunt)
+    elif "magic" in state:
+        render_magic(state.magic)
     elif "game" in state:
         render_sudoku(state.game)
 

@@ -117,11 +117,17 @@ def test_tests_is_the_first_screen_and_is_built():
     assert "Coming soon" not in page_text(at)
 
 
-@pytest.mark.parametrize("section", ["Games", "Profile"])
+@pytest.mark.parametrize("section", ["Profile"])
 def test_other_sections_show_coming_soon(section):
     at = open_app()
     go_to(at, section)
     assert "Coming soon" in page_text(at)
+
+
+def test_games_section_is_built():
+    at = open_app()
+    go_to(at, "Games")
+    assert "Coming soon" not in page_text(at)
 
 
 # --- Tests screen (decision 11) ---
@@ -494,7 +500,6 @@ def test_games_section_lists_all_four_games():
     text = page_text(at)
     for game in GAMES:
         assert game in text
-    assert "Coming soon" in text  # for the three games that are not built yet
 
 
 def test_games_section_offers_the_four_levels():
@@ -732,3 +737,113 @@ def test_changing_the_game_ends_the_hunt():
     at.selectbox(key="game_choice").set_value("Sudoku").run()
     assert not at.exception
     assert "hunt" not in at.session_state
+
+
+# --- Games: Magic Square (spec 002d) ---
+
+MAGIC_EMPTY_CELLS = {"Easy": 4, "Medium": 6, "Hard": 7, "Pro": 10}
+
+
+def start_magic(level="Easy"):
+    at = open_app()
+    go_to(at, "Games")
+    at.selectbox(key="game_choice").set_value("Magic Square").run()
+    assert not at.exception
+    at.selectbox(key="game_level").set_value(level)
+    at.button(key="new_game").click().run()
+    assert not at.exception
+    return at
+
+
+def magic_cell_keys(at):
+    return {b.key for b in at.button if b.key and b.key.startswith("magic_cell_")}
+
+
+def magic_keypad(at):
+    return [int(b.label) for b in at.button if b.key and b.key.startswith("magic_key_")]
+
+
+def first_empty_magic_cell(at):
+    game = at.session_state["magic"]
+    for r, row in enumerate(game.grid):
+        for c, value in enumerate(row):
+            if value == 0:
+                return r, c, game.puzzle.solution[r][c]
+    raise AssertionError("no empty cell")
+
+
+def magic_enter(at, row, col, value):
+    at.button(key=f"magic_cell_{row}_{col}").click().run()
+    at.button(key=f"magic_key_{value}").click().run()
+    assert not at.exception
+
+
+def wrong_magic_number(at, right):
+    return next(n for n in magic_keypad(at) if n != right)
+
+
+def test_games_picker_offers_all_four_games():
+    at = open_app()
+    go_to(at, "Games")
+    options = list(at.selectbox(key="game_choice").options)
+    assert options[: len(GAMES)] == GAMES  # the four R4 games, in the brief's order
+
+
+@pytest.mark.parametrize("level", LEVELS)
+def test_new_magic_square_shows_target_cells_keypad_and_lives(level):
+    at = start_magic(level)
+    game = at.session_state["magic"]
+    assert metrics(at)["Target sum"] == str(game.puzzle.target)
+    assert metrics(at)["Lives"] == "3"
+    assert len(magic_cell_keys(at)) == MAGIC_EMPTY_CELLS[level]
+    expected = sorted(
+        game.puzzle.solution[r][c]
+        for r in range(len(game.grid))
+        for c in range(len(game.grid))
+        if game.grid[r][c] == 0
+    )
+    assert magic_keypad(at) == expected
+
+
+def test_magic_correct_number_locks_the_cell_and_leaves_the_keypad():
+    at = start_magic()
+    row, col, right = first_empty_magic_cell(at)
+    magic_enter(at, row, col, right)
+    assert f"magic_cell_{row}_{col}" not in magic_cell_keys(at)
+    assert right not in magic_keypad(at)
+    assert metrics(at)["Lives"] == "3"
+
+
+def test_magic_wrong_number_lowers_the_lives():
+    at = start_magic()
+    row, col, right = first_empty_magic_cell(at)
+    magic_enter(at, row, col, wrong_magic_number(at, right))
+    assert metrics(at)["Lives"] == "2"
+    assert f"magic_cell_{row}_{col}" in magic_cell_keys(at)
+
+
+def test_magic_keypad_without_a_cell_asks_for_a_cell():
+    at = start_magic()
+    number = magic_keypad(at)[0]
+    at.button(key=f"magic_key_{number}").click().run()
+    assert not at.exception
+    assert metrics(at)["Lives"] == "3"
+    assert any("Tap an empty cell first" in w.value for w in at.warning)
+
+
+def test_magic_three_wrong_numbers_show_game_over():
+    at = start_magic()
+    row, col, right = first_empty_magic_cell(at)
+    for _ in range(3):
+        magic_enter(at, row, col, wrong_magic_number(at, right))
+    assert "Game over" in page_text(at)
+    assert not magic_cell_keys(at)
+
+
+def test_magic_solving_shows_you_solved_it():
+    at = start_magic("Hard")
+    for _ in range(MAGIC_EMPTY_CELLS["Hard"]):
+        row, col, right = first_empty_magic_cell(at)
+        magic_enter(at, row, col, right)
+    assert "You solved it!" in page_text(at)
+    assert metrics(at)["Lives"] == "3"
