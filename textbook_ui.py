@@ -12,10 +12,12 @@ from collections.abc import Callable
 import pandas as pd
 import streamlit as st
 
+import activity_db
 import textbook_db
 from knowledge_content import category_of as trick_category_of
 from knowledge_content import get_trick
 from practice_ui import Practice
+from stats import Kind
 from tasks import LEVELS
 from textbook import (
     ROUND_LENGTH,
@@ -98,13 +100,20 @@ def _show_feedback(attempt) -> None:
         st.warning(f"Skipped. The answer is {right}.")
 
 
+
+def save_owned_round(round_id, practice_round, finished_at) -> None:
+    """Save the completed round and record the signed in player (spec 012)."""
+    textbook_db.save_round(round_id, practice_round, finished_at)
+    activity_db.assign_owner(Kind.TEXTBOOK, round_id, state.user.id)
+
+
 PRACTICE = Practice(
     "tb_",
     start_round=start_round,
     submit_answer=submit_answer,
     skip_task=skip_task,
     current_task=current_task,
-    save_round=textbook_db.save_round,
+    save_round=save_owned_round,
     item_of=lambda practice_round: practice_round.article_id,
     item_screen="article",
     back_label="Back to article",
