@@ -45,7 +45,9 @@ external database service are used, although the brief does not require them.
   heading "Mathbuddy" and two tabs, "Sign in" (username, password) and
   "Create account" (username, email, password, repeat password).
   It shows the hint "Use a password you don't use anywhere else."
-- A rejected sign up shows every reason and creates no account.
+- A rejected sign up shows every reason that applies, and only those, and
+  creates no account. When the user changes a field, the shown reasons are
+  updated (review of PR #14).
 - Creating an account signs the new user in.
 - After signing in, the navigation works as before. The sidebar shows
   "Signed in as <username>" and a "Sign out" button. Signing out returns to
@@ -82,7 +84,9 @@ Any change to the rules of Tests, Trainer, Knowledge, Textbook or Games.
 - **Accounts (A7):** "adrian" can be created; "Adrian" is then rejected;
   "adrian@" is rejected; an email used by another account is rejected
   (also in other upper or lower case); a password of 7 characters is
-  rejected; two different passwords are rejected. A rejected sign up creates no account.
+  rejected; two different passwords are rejected. A short password typed twice shows
+  only the length error; a long password with a mismatch shows only the
+  mismatch error, also after correcting a field. A rejected sign up creates no account.
 - **Password:** the stored hash does not contain the password; the same
   password with the same salt gives the same hash; a different salt gives a
   different hash; the right password signs in, a wrong one does not;
@@ -91,6 +95,8 @@ Any change to the rules of Tests, Trainer, Knowledge, Textbook or Games.
   highscores of user B. Runs without an owner appear for nobody.
 - **Sign in screen:** without a user, the navigation is not shown; after
   signing in it is; after signing out it is gone again.
+- **Product brief:** version 1.1 describes accounts, passwords and the online
+  database (MB05, MB R7, MB R9, scope boundaries, A7, A10).
 - **Both databases:** all existing tests pass on SQLite. `tests/test_postgres.py`
   passes against a Neon test branch.
 - **Online:** an account created on a phone through the public link can sign
