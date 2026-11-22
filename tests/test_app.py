@@ -117,11 +117,17 @@ def test_tests_is_the_first_screen_and_is_built():
     assert "Coming soon" not in page_text(at)
 
 
-@pytest.mark.parametrize("section", ["Games", "Profile"])
+@pytest.mark.parametrize("section", ["Profile"])
 def test_other_sections_show_coming_soon(section):
     at = open_app()
     go_to(at, section)
     assert "Coming soon" in page_text(at)
+
+
+def test_games_section_is_built():
+    at = open_app()
+    go_to(at, "Games")
+    assert "Coming soon" not in page_text(at)
 
 
 # --- Tests screen (decision 11) ---
@@ -494,7 +500,6 @@ def test_games_section_lists_all_four_games():
     text = page_text(at)
     for game in GAMES:
         assert game in text
-    assert "Coming soon" in text  # for the three games that are not built yet
 
 
 def test_games_section_offers_the_four_levels():
