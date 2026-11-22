@@ -13,6 +13,7 @@ import streamlit as st
 import accounts_db
 import db
 import magicsquare
+import numberchain
 import numberhunt
 import sudoku
 import trainer_ui
@@ -62,7 +63,7 @@ NO_VALUE = "–"
 IGNORED_HINT = "Numbers only, e.g. 4250"
 LIVES = sudoku.LIVES
 SUDOKU_VARIANTS = {"Mini Sudoku": sudoku.MINI, "Sudoku": sudoku.CLASSIC}
-GAMES = [*SUDOKU_VARIANTS, "Number Hunt", "Magic Square"]
+GAMES = [*SUDOKU_VARIANTS, "Number Hunt", "Magic Square", "Number Chain"]
 HUNT_OPERATIONS = {"plus": "+", "minus": "−", "times": "×", "divide": "÷"}
 GAME_RULES = {
     "Mini Sudoku": (
@@ -84,6 +85,11 @@ GAME_RULES = {
         "Fill the grid so that every row, every column and both diagonals add up to the "
         "target sum. Tap an empty cell, then a number: the keypad only offers the numbers "
         "you still need. A wrong number costs one of your 3 lives."
+    ),
+    "Number Chain": (
+        "A start number appears, then one step after another, e.g. + 8, × 3, − 9. "
+        "Calculate along in your head and type the result. Every right result is a point "
+        "and makes the next chain one step longer. A wrong result costs one of your 3 lives."
     ),
 }
 
@@ -310,7 +316,10 @@ def cell_key(row: int, col: int) -> str:
 def clear_game() -> None:
     for key in [key for key in state if str(key).startswith("cell_")]:
         del state[key]  # no old entries in the next grid's fields
-    for name in ("game", "hunt", "hunt_message", "magic", "magic_pick", "magic_message"):
+    for name in (
+        "game", "hunt", "hunt_message", "magic", "magic_pick", "magic_message",
+        "chain", "chain_rng", "chain_phase", "chain_feedback", "chain_hint",
+    ):
         state.pop(name, None)
     state.game_flash = None
     state.game_hint = False
@@ -328,6 +337,10 @@ def on_new_game() -> None:
         state.hunt = numberhunt.start_game(state.game_level, random.Random())
     elif choice == "Magic Square":
         state.magic = magicsquare.start_game(state.game_level, random.Random())
+    elif choice == "Number Chain":
+        state.chain_rng = random.Random()
+        state.chain = numberchain.start_game(state.game_level, state.chain_rng)
+        state.chain_phase = "ready"
     else:
         variant = SUDOKU_VARIANTS[choice]
         state.game = sudoku.start_game(state.game_level, random.Random(), variant)
@@ -399,6 +412,21 @@ def on_magic_key(value: int) -> None:
     state.magic_message = None
     state.game_attempt = state.get("game_attempt", 0) + 1
     state.game_flash = cell if outcome == magicsquare.Outcome.WRONG else None
+
+
+def on_chain_start() -> None:
+    state.chain_phase = "showing"
+    state.chain_feedback = None
+
+
+def on_chain_submit() -> None:
+    game, outcome = numberchain.answer(state.chain, state.chain_answer, state.chain_rng)
+    state.chain_hint = outcome == numberchain.Outcome.IGNORED
+    if outcome == numberchain.Outcome.IGNORED:
+        return
+    state.chain = game
+    state.chain_feedback = outcome
+    state.chain_phase = "ready"
 
 
 # --- Screens ---
@@ -911,6 +939,87 @@ def render_magic(game: magicsquare.Game) -> None:
     render_magic_flash()
 
 
+CHAIN_CSS = """<style>
+.chain-big {
+    font-size: 4rem;
+    font-weight: 800;
+    text-align: center;
+    padding: 1.5rem 0;
+}
+.st-key-chain_header [data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; }
+.st-key-chain_header [data-testid="stColumn"] {
+    min-width: 0 !important;
+    width: auto !important;
+    flex: 1 1 0 !important;
+}
+</style>"""
+
+
+def render_chain_showing(game: numberchain.Game) -> None:
+    """Show the start number and each step for a few seconds, then ask for the result."""
+    seconds = numberchain.LEVEL_SETTINGS[game.level].seconds
+    chain = game.chain
+    big = st.empty()
+    progress = st.empty()
+    # While this script sleeps, the elements of the previous screen would stay
+    # visible below. Empty placeholders overwrite them.
+    for _ in range(8):
+        st.empty()
+
+    shown = [(f"Start: {chain.start}", "Remember this number.")]
+    total = len(chain.steps)
+    shown += [(step.text, f"Step {k} of {total}") for k, step in enumerate(chain.steps, 1)]
+    for text, caption in shown:
+        big.html(f'<div class="chain-big">{text}</div>')
+        progress.caption(caption)
+        time.sleep(seconds)
+    state.chain_phase = "answer"
+    st.rerun()
+
+
+def render_chain(game: numberchain.Game) -> None:
+    st.html(CHAIN_CSS)
+    phase = state.get("chain_phase", "ready")
+    if phase == "showing":
+        render_chain_showing(game)
+        return
+
+    with st.container(key="chain_header"):
+        lives_column, score_column, length_column = st.columns(3)
+        with lives_column:
+            render_lives(game.lives)
+        score_column.metric("Score", game.score)
+        length_column.metric("Steps", len(game.chain.steps))
+
+    feedback = state.get("chain_feedback")
+    if game.status == numberchain.Status.LOST:
+        st.markdown(
+            f"### :red[Game over]\nThe result was {game.last_result}. "
+            f"You solved {game.score} chain{'' if game.score == 1 else 's'}."
+        )
+        return
+    if feedback == numberchain.Outcome.CORRECT:
+        st.success(f"Right! The result was {game.last_result}.")
+    elif feedback == numberchain.Outcome.WRONG:
+        st.warning(f"Not quite: the result was {game.last_result}. That cost a life.")
+
+    if phase == "answer":
+        with st.form("chain_form", clear_on_submit=True, border=False):
+            st.text_input("Your result", key="chain_answer", autocomplete="off")
+            st.form_submit_button(
+                "Submit", key="chain_submit", type="primary", on_click=on_chain_submit
+            )
+        if state.get("chain_hint"):
+            st.warning("Numbers only, e.g. 42")
+    else:
+        label = "Start chain" if game.score == 0 and feedback is None else "Next chain"
+        st.button(label, key="chain_start", type="primary", on_click=on_chain_start)
+        st.caption(
+            f"{len(game.chain.steps)} steps, "
+            f"{numberchain.LEVEL_SETTINGS[game.level].seconds:g} seconds each."
+        )
+
+
 def render_games() -> None:
     st.header("Games", anchor=False)
     choice = st.selectbox("Game", GAMES, key="game_choice", on_change=on_game_change)
@@ -919,7 +1028,7 @@ def render_games() -> None:
     st.markdown(GAME_RULES[choice])
 
     level_column, button_column = st.columns([2, 1], vertical_alignment="bottom")
-    game = state.get("game") or state.get("hunt") or state.get("magic")
+    game = state.get("game") or state.get("hunt") or state.get("magic") or state.get("chain")
     level_column.selectbox(
         "Level",
         LEVELS,
@@ -937,6 +1046,8 @@ def render_games() -> None:
         render_hunt(state.hunt)
     elif "magic" in state:
         render_magic(state.magic)
+    elif "chain" in state:
+        render_chain(state.chain)
     elif "game" in state:
         render_sudoku(state.game)
 
