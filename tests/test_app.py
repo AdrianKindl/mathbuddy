@@ -15,7 +15,9 @@ import pytest
 from streamlit.testing.v1 import AppTest
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 
+import accounts_db
 import db
+from conftest import TEST_USER
 
 APP = Path(__file__).resolve().parent.parent / "app.py"
 TEST_TYPES = ["Addition", "Subtraction", "Multiplication", "Division", "Random"]
@@ -92,6 +94,8 @@ def highscore_table(at):
 def seed_run(run_id, level, correct):
     db.init_db()
     db.save_run(run_id, "Multiplication", level, FINISHED, correct, 0, 0)
+    accounts_db.init_db()  # since 011: runs belong to the signed in test user
+    accounts_db.assign_run(run_id, TEST_USER.id)
 
 
 # --- Navigation (MB01) ---
@@ -113,7 +117,7 @@ def test_tests_is_the_first_screen_and_is_built():
     assert "Coming soon" not in page_text(at)
 
 
-@pytest.mark.parametrize("section", ["Knowledge", "Games", "Profile"])
+@pytest.mark.parametrize("section", ["Games", "Profile"])
 def test_other_sections_show_coming_soon(section):
     at = open_app()
     go_to(at, section)
@@ -317,7 +321,7 @@ def test_aborted_run_saves_nothing_and_returns_to_the_tests_screen(fast_sleep):
 
 def test_leaving_the_section_during_a_run_saves_nothing(fast_sleep):
     at = start_test(open_app())
-    go_to(at, "Knowledge")
+    go_to(at, "Profile")
     assert "Coming soon" in page_text(at)
     go_to(at, "Tests")
 

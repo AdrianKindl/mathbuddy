@@ -14,3 +14,6 @@ wheels/
 *.sqlite3
 data/
 .env
+
+# Streamlit secrets (database connection string)
+.streamlit/secrets.toml
