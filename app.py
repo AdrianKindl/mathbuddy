@@ -36,6 +36,7 @@ from runs import (
     start_run,
     submit_answer,
 )
+from leaderboard import MIN_SCORE, TOP, Row, build
 from stats import accuracy as overall_accuracy
 from stats import last_7_days, longest_streak, tasks_completed
 from tasks import LEVELS, TEST_TYPES, generate_task
@@ -64,6 +65,9 @@ PASSWORD_HINT = "Use a password you don't use anywhere else."
 TESTS_DESCRIPTION = "Solve as many tasks as you can in 60 seconds. Only correct answers count."
 EXAMPLE_PROMPT = "Calculate"  # the Trainer's prompt for the basic operations
 NO_VALUE = "–"
+LEADERBOARD_COLUMNS = ["Rank", "Player", "Score"]  # MB06: no date shown
+LEADERBOARD_EMPTY = "No runs yet for this operation and level."
+OWN_ROW_STYLE = "background-color: rgba(255, 75, 75, 0.15); font-weight: 600"
 APP_TIME_ZONE = ZoneInfo("Europe/Lisbon")  # calendar days for streak and chart (spec 012)
 PROFILE_EMPTY = "Complete a test, training, practice round or game to see your statistics here."
 IGNORED_HINT = "Numbers only, e.g. 4250"
@@ -519,6 +523,35 @@ def render_highscores() -> None:
             index=list(TEST_TYPES),
         )
     )
+    render_leaderboard(operation, level)
+
+
+def leaderboard_cells(row: Row) -> list[str]:
+    player = f"{row.username} (you)" if row.is_you else row.username
+    return [str(row.rank), player, str(row.value)]
+
+
+def render_leaderboard(operation: str, level: str) -> None:
+    """MB06: the all-time leaderboard for the selected operation and level."""
+    st.subheader("Leaderboard", anchor=False)
+    st.caption(f"All-time top {TOP} · {operation} · {level}")
+    board = build(
+        db.leaderboard_entries(operation, level), user_id=state.user.id, at_least=MIN_SCORE
+    )
+    if not board.top:
+        st.caption(LEADERBOARD_EMPTY)
+        return
+
+    rows = [leaderboard_cells(row) for row in board.top]
+    marked = [row.is_you for row in board.top]
+    if board.own is not None:  # the signed-in user ranks below the top 15
+        rows += [["…", "", ""], leaderboard_cells(board.own)]
+        marked += [False, True]
+    frame = pd.DataFrame(rows, columns=LEADERBOARD_COLUMNS)
+    styled = frame.style.apply(
+        lambda line: [OWN_ROW_STYLE if marked[line.name] else ""] * len(line), axis=1
+    ).hide(axis="index")
+    st.table(styled)
 
 
 def days_text(days: int) -> str:

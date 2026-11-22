@@ -5,6 +5,7 @@
 **5 sections · 4 difficulty levels · 60-second tests**
 Group project · Introduction to Programming · Version 1.2 · 22 November 2026
 
+> **Changes in 1.2 (spec 013, leaderboard):** an all-time leaderboard per test type and level (new MB06, new MB R10, adjusted MB R7, MB R9 and scope boundaries, new A11–A13).
 > **Changes in 1.2 (spec 012, profile):** MB R8 counts all completed activities (Tests, Trainer, Knowledge practice, Games) for the streak and the 7-day chart; tasks and accuracy include Tests, Trainer and Knowledge practice.
 >
 > **Changes in 1.1 (spec 011, online accounts):** passwords and a shared online database are now in scope (MB05, MB R7, new MB R9, scope boundaries, extended A7, new A10).
@@ -54,6 +55,9 @@ When the time is up, show the score (correct answers), the number of wrong and s
 ### MB05 – Account and profile
 Let a user create an account with a username, an email address and a password (typed twice), and sign in with their username and password from any device. A user must be signed in to use the app; without a user only the sign in screen is shown. A signed in user can sign out. The profile shows the username, total tasks completed, accuracy, longest streak, the highscore per test type and level, and a bar chart of completed activities for each of the last 7 days (x-axis: weekdays, bars: completed activities per day).
 
+### MB06 – See the leaderboard
+On the Tests screen, below the highscores, show the all-time leaderboard for the test type and level currently selected; it changes when the selection changes. It lists the top 15 players with rank, username and highscore, and shows the signed-in user where they stand (MB R10).
+
 ---
 
 ## Business rules
@@ -91,10 +95,10 @@ Only a run that reaches the end of its 60 seconds is completed and saved. An abo
 The highscore for a test type and level is the highest score among the user's completed runs of that test type and level. A run with a lower score leaves the highscore unchanged.
 
 ### MB R7 – Accounts
-A username is 3–20 characters (letters A–Z, digits, underscore) and unique regardless of upper or lower case ("Adrian" and "adrian" are the same username). An email address must have a valid format (`name@domain.tld`, no spaces) and may belong to only one account, compared in lower case. A password has at least 8 characters and must be typed the same way twice. A rejected sign-up shows every reason that applies, and only those; when the user corrects a field, the shown reasons are updated. Passwords are never stored, only a salted hash. Signing in works with the username in any upper or lower case; a wrong username and a wrong password give the same message ("Wrong username or password"). Each user only sees their own statistics and highscores.
+A username is 3–20 characters (letters A–Z, digits, underscore) and unique regardless of upper or lower case ("Adrian" and "adrian" are the same username). An email address must have a valid format (`name@domain.tld`, no spaces) and may belong to only one account, compared in lower case. A password has at least 8 characters and must be typed the same way twice. A rejected sign-up shows every reason that applies, and only those; when the user corrects a field, the shown reasons are updated. Passwords are never stored, only a salted hash. Signing in works with the username in any upper or lower case; a wrong username and a wrong password give the same message ("Wrong username or password"). Each user only sees their own statistics and highscores, except the leaderboard (MB R10), which shows the usernames and best scores of all users.
 
 ### MB R9 – Storage
-Accounts and completed runs are stored in one shared online database, so that a user can sign in from any device and sees the same data everywhere. The connection details are secret: they are kept outside the code repository and never shown. Without connection details the app uses a local file instead, so it can be developed and tested offline. Automated tests never use the online database. Runs saved before accounts existed have no owner; they are kept but shown to nobody.
+Accounts and completed runs are stored in one shared online database, so that a user can sign in from any device and sees the same data everywhere. The connection details are secret: they are kept outside the code repository and never shown. Without connection details the app uses a local file instead, so it can be developed and tested offline. Automated tests never use the online database. Runs saved before accounts existed have no owner; they are kept but shown to nobody and left out of the leaderboard.
 
 ### MB R8 – Statistics and streak
 - **Activity** = one completed test run, finished Trainer session, completed practice round (Tricks or Textbook) or finished game (won or lost). Aborted runs and sessions, rounds left early and games left before they end are not activities.
@@ -104,6 +108,9 @@ Accounts and completed runs are stored in one shared online database, so that a 
 - **Streak** = consecutive calendar days with at least one activity. Several activities on one day count as one day. The profile shows the longest streak.
 - **Calendar day** = the day in the app time zone, Europe/Lisbon.
 - **Highscores** are about test runs only (MB R6).
+
+### MB R10 – Leaderboard
+There is one all-time leaderboard per test type and level, of all users. Each user appears at most once, with their best score (MB R6) from their completed runs of that test type and level; if they reached it more than once, the earliest time counts. Only highscores of at least 1 count: a user whose best score is 0 does not appear and gets no own row. Runs without an owner are not included. Higher scores rank first; equal scores are ordered by the time the score was reached, earlier first; with the same score and the same time, usernames are ordered alphabetically, ignoring upper and lower case. Every player gets their own rank (1, 2, 3, …). The leaderboard shows the top 15 with rank, username and score; the time a score was reached is only used for the order and not shown. Email addresses are never shown. If the signed-in user is in the top 15, their row is highlighted; if they rank lower, their own row with their rank is shown below the top 15; without a completed run of this test type and level, no own row is shown. The leaderboard is calculated from the saved runs and not stored separately.
 
 ---
 
@@ -144,6 +151,15 @@ With two completed runs today, one yesterday and none on the five days before, t
 ### Scenario A10 – Online accounts
 An account created on a phone through the public link can sign in on a laptop and sees the same highscores. After the online app is restarted, accounts and runs are still there. A run completed by user A does not appear in the highscores of user B. Runs without an owner appear for nobody.
 
+### Scenario A11 – Leaderboard order
+In Multiplication Easy, Mia reached 18 on Monday, Adrian reached 18 on Tuesday and Lena reached 15. The leaderboard shows 1 Mia, 2 Adrian, 3 Lena. Adrian's runs of 12 and 18 appear once, with 18.
+
+### Scenario A12 – Own rank
+With 20 players on a leaderboard, 15 rows are shown. A signed-in user ranked 18th sees their own row with rank 18 below the top 15; a user ranked 4th sees their row highlighted and no extra row; a user without a run of this test type and level sees no own row.
+
+### Scenario A13 – Separate and private
+A run of Multiplication Medium does not appear on the Multiplication Easy leaderboard. Runs without an owner appear on no leaderboard. No email address appears on the leaderboard.
+
 ---
 
 ## Later releases (overview)
@@ -178,6 +194,6 @@ All games have the four levels and 3 lives. A wrong entry costs a life; losing a
 ---
 
 ## Scope boundaries
-Passwords and a shared online database are in scope since version 1.1 (spec 011); the app runs on a free hosting service and a free online database. A leaderboard between users is planned (spec 013). Email verification, password reset, changing the username or password, deleting accounts, locking an account after failed sign-ins, payments, advertising, sound, offline mobile apps and any paid external service are not required.
+Passwords and a shared online database are in scope since version 1.1 (spec 011); the app runs on a free hosting service and a free online database. An all-time leaderboard per test type and level is in scope since version 1.2 (spec 013); leaderboards for other sections, weekly boards and friends are not. Email verification, password reset, changing the username or password, deleting accounts, locking an account after failed sign-ins, payments, advertising, sound, offline mobile apps and any paid external service are not required.
 
 Completed runs and accounts must survive restarting the app. Rejected actions (invalid sign-ups, answers after the time limit, aborted runs) leave saved data unchanged. The core experience works with generated content. The online app needs its database; locally the app and all tests also work without an internet connection.
