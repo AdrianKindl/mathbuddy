@@ -15,7 +15,9 @@ import pytest
 from streamlit.testing.v1 import AppTest
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 
+import accounts_db
 import db
+from conftest import TEST_USER
 
 APP = Path(__file__).resolve().parent.parent / "app.py"
 TEST_TYPES = ["Addition", "Subtraction", "Multiplication", "Division", "Random"]
@@ -92,6 +94,8 @@ def highscore_table(at):
 def seed_run(run_id, level, correct):
     db.init_db()
     db.save_run(run_id, "Multiplication", level, FINISHED, correct, 0, 0)
+    accounts_db.init_db()  # since 011: runs belong to the signed in test user
+    accounts_db.assign_run(run_id, TEST_USER.id)
 
 
 # --- Navigation (MB01) ---
