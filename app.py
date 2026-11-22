@@ -2,6 +2,7 @@
 
 import math
 import random
+import secrets
 import time
 import uuid
 from datetime import datetime, timezone
@@ -9,6 +10,7 @@ from datetime import datetime, timezone
 import pandas as pd
 import streamlit as st
 
+import accounts_db
 import db
 import magicsquare
 import numberchain
@@ -33,15 +35,32 @@ from runs import (
     submit_answer,
 )
 from tasks import LEVELS, TEST_TYPES, generate_task
-from ui_components import EXAMPLE_SEED, example_box, pick
+from accounts import (
+    SIGN_IN_FAILED,
+    User,
+    hash_password,
+    normalize_email,
+    sign_up_problems,
+    verify_password,
+)
+import knowledge_ui
+from ui_components import (
+    EXAMPLE_SEED,
+    FLASH_COLORS,
+    FLASH_MS,
+    answer_flash,
+    answer_focus,
+    answer_form,
+    example_box,
+    pick,
+)
 
 SECTIONS = ["Tests", "Trainer", "Knowledge", "Games", "Profile"]
+PASSWORD_HINT = "Use a password you don't use anywhere else."
 TESTS_DESCRIPTION = "Solve as many tasks as you can in 60 seconds. Only correct answers count."
 EXAMPLE_PROMPT = "Calculate"  # the Trainer's prompt for the basic operations
 NO_VALUE = "–"
 IGNORED_HINT = "Numbers only, e.g. 4250"
-FLASH_COLORS = {"green": "rgb(22, 163, 74)", "red": "rgb(220, 38, 38)"}
-FLASH_MS = 700
 LIVES = sudoku.LIVES
 SUDOKU_VARIANTS = {"Mini Sudoku": sudoku.MINI, "Sudoku": sudoku.CLASSIC}
 GAMES = [*SUDOKU_VARIANTS, "Number Hunt", "Magic Square", "Number Chain"]
@@ -81,6 +100,102 @@ def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def own_runs():
+    """The signed in user's completed runs (spec 011)."""
+    return accounts_db.list_runs_for(state.user.id)
+
+
+# --- Accounts (spec 011) ---
+
+
+def current_sign_up_problems() -> list[str]:
+    username = state.get("signup_username", "").strip()
+    email = normalize_email(state.get("signup_email", ""))
+    return sign_up_problems(
+        username,
+        email,
+        state.get("signup_password", ""),
+        state.get("signup_repeat", ""),
+        username_taken=accounts_db.username_taken(username),
+        email_taken=accounts_db.email_taken(email),
+    )
+
+
+def on_sign_up_field_change() -> None:
+    """Shown sign up errors follow the fields, so only errors that apply stay."""
+    if state.get("account_errors") and state.account_errors != [SIGN_IN_FAILED]:
+        state.account_errors = current_sign_up_problems()
+
+
+def on_sign_up() -> None:
+    username = state.signup_username.strip()
+    email = normalize_email(state.signup_email)
+    password = state.signup_password
+    problems = current_sign_up_problems()
+    if not problems:
+        user = User(
+            id=str(uuid.uuid4()),
+            username=username,
+            email=email,
+            password_hash=hash_password(password, secrets.token_bytes(16)),
+            created_at=utc_now(),
+        )
+        try:
+            accounts_db.create_user(user)
+        except ValueError:  # taken in the meantime by someone else
+            problems = current_sign_up_problems()
+        else:
+            sign_in_as(user)
+            return
+    state.account_errors = problems
+
+
+def on_sign_in() -> None:
+    user = accounts_db.find_user(state.signin_username.strip())
+    if user is None or not verify_password(state.signin_password, user.password_hash):
+        state.account_errors = [SIGN_IN_FAILED]
+        return
+    sign_in_as(user)
+
+
+def sign_in_as(user: User) -> None:
+    for key in ("signin_password", "signup_password", "signup_repeat"):
+        state.pop(key, None)
+    state.pop("account_errors", None)
+    state.user = user
+
+
+def on_sign_out() -> None:
+    on_nav_change()  # leaves a running test unsaved, like switching sections
+    state.clear()
+
+
+def render_sign_in() -> None:
+    st.title("Mathbuddy", anchor=False)
+    sign_in_tab, sign_up_tab = st.tabs(["Sign in", "Create account"])
+    with sign_in_tab:
+        st.text_input("Username", key="signin_username")
+        st.text_input("Password", type="password", key="signin_password")
+        st.button("Sign in", key="signin_submit", type="primary", on_click=on_sign_in)
+    with sign_up_tab:
+        changed = on_sign_up_field_change
+        st.text_input("Username", key="signup_username", max_chars=20, on_change=changed)
+        st.text_input("Email", key="signup_email", on_change=changed)
+        st.text_input("Password", type="password", key="signup_password", on_change=changed)
+        st.text_input("Repeat password", type="password", key="signup_repeat", on_change=changed)
+        st.caption(PASSWORD_HINT)
+        st.button("Create account", key="signup_submit", type="primary", on_click=on_sign_up)
+    for message in state.get("account_errors", []):
+        st.error(message)
+
+
+def render_account_sidebar() -> None:
+    with st.sidebar:
+        name = state.user.username.replace("_", "\\_")  # "_" would turn text italic
+        st.markdown(f"Signed in as {name}")
+        st.button("Sign out", key="sign_out", on_click=on_sign_out)
+
+
 # --- Changing screens ---
 
 
@@ -103,7 +218,7 @@ def clear_run() -> None:
 
 def complete_run(run: Run) -> None:
     """Save the run and prepare the result. Safe to repeat for the same run."""
-    earlier = [saved for saved in db.list_runs() if saved.id != state.run_id]
+    earlier = [saved for saved in own_runs() if saved.id != state.run_id]
     previous = highscores(earlier).get((run.test_type, run.level))
     db.save_run(
         state.run_id,
@@ -114,9 +229,10 @@ def complete_run(run: Run) -> None:
         run.wrong,
         run.skipped,
     )
+    accounts_db.assign_run(state.run_id, state.user.id)
     state.result = {
         "run": run,
-        "highscore": highscores(db.list_runs())[(run.test_type, run.level)],
+        "highscore": highscores(own_runs())[(run.test_type, run.level)],
         "is_new": is_new_highscore(previous, run.correct),
     }
     clear_run()
@@ -187,6 +303,7 @@ def on_nav_change() -> None:
     state.pop("result", None)
     state.phase = "select"
     trainer_ui.leave()
+    knowledge_ui.leave()
 
 
 # --- Games ---
@@ -332,7 +449,7 @@ def render_select() -> None:
     st.button("Start", key="start", type="primary", on_click=on_start)
 
     st.subheader("Highscores", anchor=False)
-    best = highscores(db.list_runs())
+    best = highscores(own_runs())
     st.table(
         pd.DataFrame(
             {
@@ -372,61 +489,17 @@ def render_timer() -> None:
     st.metric("Time left", math.ceil(remaining_seconds(run, now)))
 
 
-def render_flash() -> None:
-    color = state.get("flash")
-    if color is None:
-        return
-    # A new animation name per attempt makes the same colour replay. The colour
-    # holds for most of the flash, then fades back to the field's normal look.
-    name = f"flash-{state.attempt}"
-    flash_color = FLASH_COLORS[color]
-    st.html(
-        f"""<style>
-        @keyframes {name} {{
-            0%, 60% {{
-                background-color: {flash_color};
-                border-color: {flash_color};
-                box-shadow: 0 0 0 3px {flash_color}, 0 0 18px 6px {flash_color};
-            }}
-        }}
-        .st-key-answer [data-testid="stTextInputRootElement"] {{
-            animation: {name} {FLASH_MS}ms ease-out;
-        }}
-        </style>"""
-    )
-
-
-def render_focus_script() -> None:
-    """Put the cursor back in the answer field. Clicking a button would move it away."""
-    st.html(
-        f"""<script data-attempt="{state.attempt}">
-        requestAnimationFrame(() => {{
-            document.querySelector(".st-key-answer input")?.focus();
-        }});
-        </script>""",
-        unsafe_allow_javascript=True,
-    )
-
-
 def render_running() -> None:
     render_timer()
     st.header(state.current_task.text, anchor=False)
-
-    with st.form("answer_form", clear_on_submit=True, border=False):
-        st.text_input("Answer", key="answer", autocomplete="off")
-        submit_column, skip_column = st.columns(2)
-        # Submit comes first, because Enter triggers the first button in a form.
-        submit_column.form_submit_button(
-            "Submit", key="submit", type="primary", on_click=on_submit, width="stretch"
-        )
-        skip_column.form_submit_button("Skip", key="skip", on_click=on_skip, width="stretch")
+    answer_form("", on_submit, on_skip)
 
     if state.show_hint:
         st.warning(IGNORED_HINT)
     st.button("Abort test", key="abort", on_click=on_abort)
 
-    render_flash()
-    render_focus_script()
+    answer_flash("", state.get("flash"), state.attempt)
+    answer_focus("", state.attempt)
 
 
 def render_result() -> None:
@@ -979,11 +1052,26 @@ def render_games() -> None:
         render_sudoku(state.game)
 
 
+def use_online_database() -> None:
+    """Copy the online database setting from .streamlit/secrets.toml, if there is one."""
+    try:
+        db.use_database_url_from(st.secrets)
+    except FileNotFoundError:  # no secrets file: stay on the local SQLite file
+        pass
+
+
 def main() -> None:
     st.set_page_config(page_title="Mathbuddy")
     if "phase" not in state:  # once per session, so reruns during a test stay fast
+        use_online_database()
         db.init_db()
+        accounts_db.init_db()
         state.phase = "select"
+
+    if "user" not in state:
+        render_sign_in()
+        return
+    render_account_sidebar()
 
     section = st.radio(
         "Section",
@@ -997,6 +1085,8 @@ def main() -> None:
         render_tests()
     elif section == "Trainer":
         trainer_ui.render()
+    elif section == "Knowledge":
+        knowledge_ui.render()
     elif section == "Games":
         render_games()
     else:

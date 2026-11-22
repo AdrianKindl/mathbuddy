@@ -16,7 +16,14 @@ import streamlit as st
 
 import trainer_db
 from tasks import LEVELS
-from ui_components import EXAMPLE_SEED, example_box, pick
+from ui_components import (
+    EXAMPLE_SEED,
+    answer_flash,
+    answer_focus,
+    answer_form,
+    example_box,
+    pick,
+)
 from trainer import (
     CATEGORIES,
     COUNTDOWN_SECONDS,
@@ -60,8 +67,7 @@ from trainer_tasks import (
 )
 
 NO_VALUE = "–"
-FLASH_COLORS = {Outcome.CORRECT: "rgb(22, 163, 74)", Outcome.WRONG: "rgb(220, 38, 38)"}
-FLASH_MS = 700
+FLASH = {Outcome.CORRECT: "green", Outcome.WRONG: "red"}
 LONG_TASK_LENGTH = 40  # longer tasks, such as word problems, use a smaller heading
 HISTORY_LENGTH = 10
 
@@ -170,7 +176,7 @@ def _apply(session: Session, outcome: Outcome) -> None:
         return
 
     state.tr_show_hint = outcome == Outcome.IGNORED
-    state.tr_flash = outcome if outcome in FLASH_COLORS else None
+    state.tr_flash = FLASH.get(outcome)
     if outcome != Outcome.IGNORED:
         state.tr_feedback = session.attempts[-1]
         state.tr_task = generate_task(
@@ -419,40 +425,6 @@ def _render_feedback() -> None:
         st.warning(f"Skipped. The answer is **{attempt.answer}**.\n\n{attempt.solution}")
 
 
-def _render_flash() -> None:
-    color = FLASH_COLORS.get(state.get("tr_flash"))
-    if color is None:
-        return
-    # A new animation name per attempt makes the same colour replay.
-    name = f"tr-flash-{state.tr_attempt}"
-    st.html(
-        f"""<style>
-        @keyframes {name} {{
-            0%, 60% {{
-                background-color: {color};
-                border-color: {color};
-                box-shadow: 0 0 0 3px {color}, 0 0 18px 6px {color};
-            }}
-        }}
-        .st-key-tr_answer [data-testid="stTextInputRootElement"] {{
-            animation: {name} {FLASH_MS}ms ease-out;
-        }}
-        </style>"""
-    )
-
-
-def _render_focus_script() -> None:
-    """Put the cursor back in the answer field. Clicking a button would move it away."""
-    st.html(
-        f"""<script data-attempt="{state.tr_attempt}">
-        requestAnimationFrame(() => {{
-            document.querySelector(".st-key-tr_answer input")?.focus();
-        }});
-        </script>""",
-        unsafe_allow_javascript=True,
-    )
-
-
 def render_running() -> None:
     task = state.tr_task
     # The status gets a container of its own. Without it, Streamlit sometimes
@@ -467,26 +439,15 @@ def render_running() -> None:
     else:
         st.subheader(task.text, anchor=False)
 
-    with st.form("tr_answer_form", clear_on_submit=True, border=False):
-        st.text_input(
-            "Answer", key="tr_answer", autocomplete="off", placeholder=PLACEHOLDERS[task.kind]
-        )
-        submit_column, skip_column = st.columns(2)
-        # Submit comes first, because Enter triggers the first button in a form.
-        submit_column.form_submit_button(
-            "Submit", key="tr_submit", type="primary", on_click=_on_submit, width="stretch"
-        )
-        skip_column.form_submit_button(
-            "Skip", key="tr_skip", on_click=_on_skip, width="stretch"
-        )
+    answer_form("tr_", _on_submit, _on_skip, placeholder=PLACEHOLDERS[task.kind])
 
     if state.tr_show_hint:
         st.warning(ANSWER_HINTS[task.kind])
     _render_feedback()
     st.button("End training", key="tr_abort", on_click=_on_abort)
 
-    _render_flash()
-    _render_focus_script()
+    answer_flash("tr_", state.get("tr_flash"), state.tr_attempt)
+    answer_focus("tr_", state.tr_attempt)
 
 
 # --- Result ---
