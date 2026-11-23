@@ -1,0 +1,1743 @@
+/* =====================================================================
+   Mathbuddy design system (spec 777)
+   One look for every screen, on phones (up to 640px) and laptops.
+   Colours: violet for actions, coral for warmth, green / red only for
+   right / wrong. Fonts: Outfit for numbers and headings, Plus Jakarta Sans
+   for text (loaded through .streamlit/config.toml).
+   ===================================================================== */
+
+/* ---------- 1. Tokens: light (default) and dark ---------- */
+
+@property --mb-p {
+  syntax: "\3C number>"; /* the type number, escaped: Streamlit drops styles that contain "<" + a letter */
+  inherits: true;
+  initial-value: 1;
+}
+
+:root {
+  --mb-bg: #f6f4ff;
+  --mb-surface: #ffffff;
+  --mb-surface-2: #f6f3ff;
+  --mb-raised: #ffffff;
+  --mb-track: #ebe7fb;
+  --mb-border: #e4def6;
+  --mb-border-strong: #cfc6f0;
+  --mb-text: #1a1633;
+  --mb-muted: #6b6790;
+  --mb-faint: #b9b3d6;
+  --mb-primary: #6c47ff;
+  --mb-primary-strong: #4f2fe0;
+  --mb-primary-soft: #efeaff;
+  --mb-primary-ink: #4c2fd6;
+  --mb-accent: #ff7a59;
+  --mb-green: #12a16b;
+  --mb-green-soft: #e3f7ee;
+  --mb-red: #e5484d;
+  --mb-red-soft: #fdecec;
+  --mb-amber: #f5a524;
+  --mb-blue: #2f80ed;
+  --mb-grad: linear-gradient(135deg, #8a6bff 0%, #6c47ff 48%, #5a32f0 100%);
+  --mb-grad-text: linear-gradient(100deg, #6c47ff 0%, #a04bff 55%, #ff6b8b 100%);
+  --mb-grad-warm: linear-gradient(135deg, #ffa26b 0%, #ff6b8b 100%);
+  --mb-glass: rgba(255, 255, 255, 0.82);
+  --mb-shadow-sm: 0 1px 2px rgba(26, 22, 51, 0.06);
+  --mb-shadow: 0 1px 2px rgba(26, 22, 51, 0.05), 0 10px 28px -12px rgba(76, 47, 214, 0.22);
+  --mb-shadow-lg: 0 2px 6px rgba(26, 22, 51, 0.05), 0 28px 56px -22px rgba(76, 47, 214, 0.38);
+  --mb-lip: #4422cc;
+  --mb-glow-1: rgba(124, 92, 255, 0.16);
+  --mb-glow-2: rgba(255, 122, 89, 0.11);
+  --mb-radius-sm: 12px;
+  --mb-radius: 18px;
+  --mb-radius-lg: 26px;
+  --mb-display: "Outfit", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --mb-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --mb-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --mb-nav-h: 66px;
+  --mb-ring: var(--mb-primary);
+}
+
+:root[data-mb-theme="dark"] {
+  --mb-bg: #0e0b1f;
+  --mb-surface: #17142e;
+  --mb-surface-2: #1c1838;
+  --mb-raised: #2a2450;
+  --mb-track: #231e44;
+  --mb-border: #2e2852;
+  --mb-border-strong: #41397a;
+  --mb-text: #f2efff;
+  --mb-muted: #a49fc8;
+  --mb-faint: #5d5690;
+  --mb-primary: #8f73ff;
+  --mb-primary-strong: #6c47ff;
+  --mb-primary-soft: rgba(143, 115, 255, 0.17);
+  --mb-primary-ink: #c4b5ff;
+  --mb-green: #3dd68c;
+  --mb-green-soft: rgba(61, 214, 140, 0.15);
+  --mb-red: #ff6369;
+  --mb-red-soft: rgba(255, 99, 105, 0.15);
+  --mb-grad-text: linear-gradient(100deg, #a993ff 0%, #c77dff 55%, #ff8fa8 100%);
+  --mb-glass: rgba(23, 20, 46, 0.82);
+  --mb-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --mb-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 14px 32px -14px rgba(0, 0, 0, 0.7);
+  --mb-shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.35), 0 30px 60px -24px rgba(0, 0, 0, 0.8);
+  --mb-lip: #3a1fb0;
+  --mb-glow-1: rgba(124, 92, 255, 0.22);
+  --mb-glow-2: rgba(255, 107, 139, 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-mb-theme="light"]) {
+    --mb-bg: #0e0b1f;
+    --mb-surface: #17142e;
+    --mb-surface-2: #1c1838;
+    --mb-raised: #2a2450;
+    --mb-track: #231e44;
+    --mb-border: #2e2852;
+    --mb-border-strong: #41397a;
+    --mb-text: #f2efff;
+    --mb-muted: #a49fc8;
+    --mb-faint: #5d5690;
+    --mb-primary: #8f73ff;
+    --mb-primary-strong: #6c47ff;
+    --mb-primary-soft: rgba(143, 115, 255, 0.17);
+    --mb-primary-ink: #c4b5ff;
+    --mb-green: #3dd68c;
+    --mb-green-soft: rgba(61, 214, 140, 0.15);
+    --mb-red: #ff6369;
+    --mb-red-soft: rgba(255, 99, 105, 0.15);
+    --mb-grad-text: linear-gradient(100deg, #a993ff 0%, #c77dff 55%, #ff8fa8 100%);
+    --mb-glass: rgba(23, 20, 46, 0.82);
+    --mb-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --mb-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 14px 32px -14px rgba(0, 0, 0, 0.7);
+    --mb-shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.35), 0 30px 60px -24px rgba(0, 0, 0, 0.8);
+    --mb-lip: #3a1fb0;
+    --mb-glow-1: rgba(124, 92, 255, 0.22);
+    --mb-glow-2: rgba(255, 107, 139, 0.1);
+  }
+}
+
+/* ---------- 2. App shell ---------- */
+
+.stApp {
+  background:
+    radial-gradient(900px 520px at 8% -12%, var(--mb-glow-1), transparent 62%),
+    radial-gradient(760px 460px at 105% -6%, var(--mb-glow-2), transparent 58%),
+    var(--mb-bg);
+  background-attachment: fixed;
+}
+
+.stApp ::selection {
+  background: var(--mb-primary-soft);
+  color: var(--mb-primary-ink);
+}
+
+[data-testid="stMainBlockContainer"] {
+  max-width: 880px;
+  padding: 0.75rem 1.75rem 5rem !important;
+}
+
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] {
+  gap: 1.05rem;
+}
+
+/* Streamlit's own header stays (menu, running status) but is see-through. */
+[data-testid="stHeader"] {
+  background: transparent !important;
+  pointer-events: none;
+}
+[data-testid="stHeader"] :is(button, a, [role="button"], [data-testid="stStatusWidget"]) {
+  pointer-events: auto;
+}
+[data-testid="stDecoration"] {
+  display: none;
+}
+
+/* The account button in the top bar opens the account panel instead. */
+[data-testid="stExpandSidebarButton"] {
+  display: none;
+}
+
+@media (max-width: 1100px) {
+  [data-testid="stToolbar"] {
+    display: none;
+  }
+}
+
+/* The page scrolls behind the glass navigation; keep scrollbars slim. */
+.stApp * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--mb-border-strong) transparent;
+}
+
+/* Gentle entrance for anything new on screen. */
+@keyframes mb-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes mb-pop {
+  0% { transform: scale(0.92); opacity: 0.35; }
+  55% { transform: scale(1.03); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes mb-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-9px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(3px); }
+}
+@keyframes mb-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+@keyframes mb-float {
+  0%, 100% { transform: translateY(0) rotate(var(--r, 0deg)); }
+  50% { transform: translateY(-18px) rotate(calc(var(--r, 0deg) + 8deg)); }
+}
+@keyframes mb-shine {
+  from { background-position: 0 0; }
+  to { background-position: 40px 0; }
+}
+@keyframes mb-plus {
+  0% { opacity: 0; transform: translate(-50%, 6px) scale(0.6); }
+  25% { opacity: 1; transform: translate(-50%, -8px) scale(1.15); }
+  100% { opacity: 0; transform: translate(-50%, -54px) scale(1); }
+}
+
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > :not(.st-key-nav):not(:has(.mb-topbar)):not(:has(.mb-decor)) {
+  animation: mb-rise 0.38s var(--mb-ease) both;
+}
+
+/* ---------- 3. Top bar (logo + account) ---------- */
+
+[data-testid="stElementContainer"]:has(.mb-topbar) {
+  margin-bottom: -0.35rem;
+}
+
+.mb-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 52px;
+  animation: mb-rise 0.45s var(--mb-ease) both;
+}
+
+.mb-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  user-select: none;
+}
+
+/* The Mathbuddy mark: a friendly face whose eyes and smile form a "÷",
+   with a small plus as a spark. The same mark sits on the sign-in screen. */
+.mb-logo {
+  --mb-mark: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none'%3E%3Ccircle cx='11.5' cy='13' r='2.5' fill='white'/%3E%3Ccircle cx='20.5' cy='13' r='2.5' fill='white'/%3E%3Cpath d='M9.5 19.5c3.6 3.8 9.4 3.8 13 0' stroke='white' stroke-width='2.8' stroke-linecap='round'/%3E%3Cpath d='M25.5 3.5v5M23 6h5' stroke='%23FFD166' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E");
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: block;
+  background: var(--mb-mark) center / 70% no-repeat, var(--mb-grad);
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.18), 0 8px 18px -8px rgba(108, 71, 255, 0.8);
+  transform: rotate(-6deg);
+  transition: transform 0.4s var(--mb-spring);
+}
+.mb-brand:hover .mb-logo {
+  transform: rotate(4deg) scale(1.06);
+}
+
+.mb-wordmark {
+  font-family: var(--mb-display);
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--mb-text);
+}
+.mb-wordmark b {
+  font-weight: 800;
+  background: var(--mb-grad-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.mb-account {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.3rem 0.32rem 0.3rem 1rem;
+  border-radius: 999px;
+  background: var(--mb-surface);
+  border: 1px solid var(--mb-border);
+  box-shadow: var(--mb-shadow-sm);
+  cursor: pointer;
+  transition: transform 0.2s var(--mb-ease), box-shadow 0.2s, border-color 0.2s;
+}
+.mb-account:hover {
+  transform: translateY(-1px);
+  border-color: var(--mb-border-strong);
+  box-shadow: var(--mb-shadow);
+}
+.mb-account:focus-visible {
+  outline: 3px solid var(--mb-primary-soft);
+  outline-offset: 2px;
+}
+.mb-account-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.15;
+}
+.mb-greet {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--mb-muted);
+}
+.mb-name {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--mb-text);
+  max-width: 14ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mb-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--mb-grad-warm);
+  color: #fff;
+  font-family: var(--mb-display);
+  font-weight: 800;
+  font-size: 1rem;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.14);
+}
+
+/* ---------- 4. Navigation: pill bar on laptops, tab bar on phones ---------- */
+
+.st-key-nav {
+  position: sticky;
+  top: 0.65rem;
+  z-index: 100;
+}
+.st-key-nav [data-testid="stRadio"] {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
+}
+.st-key-nav [data-testid="stRadioGroup"] {
+  flex-wrap: nowrap;
+  gap: 4px;
+  padding: 5px;
+  border-radius: 999px;
+  background: var(--mb-glass);
+  -webkit-backdrop-filter: blur(18px) saturate(1.6);
+  backdrop-filter: blur(18px) saturate(1.6);
+  border: 1px solid var(--mb-border);
+  box-shadow: var(--mb-shadow);
+}
+.st-key-nav [data-testid="stRadioOption"] {
+  position: relative;
+  isolation: isolate;
+  margin: 0;
+  padding: 0.55rem 1.05rem;
+  gap: 0.5rem;
+  display: flex;
+  align-items: center;
+  border-radius: 999px;
+  color: var(--mb-muted);
+  cursor: pointer;
+  transition: color 0.25s, background-color 0.25s, transform 0.15s var(--mb-ease);
+  -webkit-tap-highlight-color: transparent;
+}
+/* The radio circle is replaced by an icon. */
+.st-key-nav [data-testid="stRadioOption"] > div > div:first-child:not([data-testid]) {
+  display: none;
+}
+.st-key-nav [data-testid="stRadioOption"]::before {
+  content: "";
+  width: 19px;
+  height: 19px;
+  flex: none;
+  background: currentColor;
+  -webkit-mask: var(--mb-icon) center / contain no-repeat;
+  mask: var(--mb-icon) center / contain no-repeat;
+}
+.st-key-nav [data-testid="stRadioOption"] p {
+  margin: 0;
+  font-size: 0.93rem;
+  font-weight: 700;
+  color: inherit;
+  white-space: nowrap;
+}
+.st-key-nav [data-testid="stRadioOption"]:hover {
+  color: var(--mb-text);
+  background: var(--mb-primary-soft);
+}
+.st-key-nav [data-testid="stRadioOption"]:active {
+  transform: scale(0.96);
+}
+.st-key-nav [data-testid="stRadioOption"]:is([data-selected="true"], :has(input:checked)) {
+  color: #fff;
+  background: var(--mb-grad);
+  box-shadow: 0 8px 18px -8px rgba(108, 71, 255, 0.85);
+}
+.st-key-nav [data-testid="stRadioOption"]:has(input:focus-visible) {
+  outline: 3px solid var(--mb-primary-soft);
+  outline-offset: 2px;
+}
+
+/* Icons, in the order of SECTIONS in app.py: Tests, Trainer, Knowledge, Games, Profile. */
+.st-key-nav [data-testid="stRadioGroup"] > :nth-child(1) [data-testid="stRadioOption"] {
+  --mb-icon: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='13.5' r='8'/%3E%3Cpath d='M12 9.5v4l2.5 2'/%3E%3Cpath d='M9.5 2.5h5'/%3E%3Cpath d='M19 5.5l1.5 1.5'/%3E%3C/svg%3E");
+}
+.st-key-nav [data-testid="stRadioGroup"] > :nth-child(2) [data-testid="stRadioOption"] {
+  --mb-icon: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Ccircle cx='12' cy='12' r='5'/%3E%3Ccircle cx='12' cy='12' r='1.2' fill='black'/%3E%3C/svg%3E");
+}
+.st-key-nav [data-testid="stRadioGroup"] > :nth-child(3) [data-testid="stRadioOption"] {
+  --mb-icon: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 18h6'/%3E%3Cpath d='M10 21.5h4'/%3E%3Cpath d='M12 2.5a6.5 6.5 0 0 0-3.9 11.7c.6.5.9 1.2.9 2V18h6v-1.8c0-.8.3-1.5.9-2A6.5 6.5 0 0 0 12 2.5z'/%3E%3C/svg%3E");
+}
+.st-key-nav [data-testid="stRadioGroup"] > :nth-child(4) [data-testid="stRadioOption"] {
+  --mb-icon: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='6' width='20' height='12' rx='5'/%3E%3Cpath d='M6.5 12h4M8.5 10v4'/%3E%3Ccircle cx='15.5' cy='10.8' r='1.1' fill='black'/%3E%3Ccircle cx='17.8' cy='13.4' r='1.1' fill='black'/%3E%3C/svg%3E");
+}
+.st-key-nav [data-testid="stRadioGroup"] > :nth-child(5) [data-testid="stRadioOption"] {
+  --mb-icon: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M4.5 21a7.5 7.5 0 0 1 15 0'/%3E%3C/svg%3E");
+}
+
+/* ---------- 5. Text ---------- */
+
+.stApp :is(h1, h2, h3, h4) {
+  font-family: var(--mb-display);
+  color: var(--mb-text);
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+[data-testid="stMain"] h1 {
+  font-size: clamp(2rem, 6vw, 2.5rem);
+}
+[data-testid="stMain"] h2 {
+  font-size: clamp(1.65rem, 5.2vw, 2rem);
+  padding-bottom: 0.1rem;
+}
+[data-testid="stMain"] h3 {
+  font-size: clamp(1.2rem, 4.2vw, 1.4rem);
+}
+[data-testid="stCaptionContainer"],
+[data-testid="stCaptionContainer"] p {
+  color: var(--mb-muted);
+  font-size: 0.93rem;
+  line-height: 1.5;
+}
+[data-testid="stMain"] [data-testid="stMarkdownContainer"] :is(p, li) {
+  line-height: 1.6;
+}
+[data-testid="stMain"] [data-testid="stMarkdownContainer"] code {
+  border-radius: 7px;
+  padding: 0.1em 0.4em;
+  font-size: 0.88em;
+}
+[data-testid="stMain"] [data-testid="stMarkdownContainer"] ol li::marker {
+  font-family: var(--mb-display);
+  font-weight: 800;
+  color: var(--mb-primary);
+}
+
+/* Labels above choices and fields read like small section titles. */
+:is([data-testid="stButtonGroup"], [data-testid="stTextInput"], [data-testid="stNumberInput"], [data-testid="stSelectbox"]) > [data-testid="stWidgetLabel"] p {
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--mb-muted);
+}
+
+/* ---------- 6. Buttons ---------- */
+
+.stApp button:is([data-testid^="stBaseButton-primary"], [data-testid^="stBaseButton-secondary"]) {
+  min-height: 46px;
+  padding: 0.55rem 1.2rem;
+  border-radius: 14px;
+  font-weight: 700;
+  transition: transform 0.12s var(--mb-ease), box-shadow 0.12s var(--mb-ease),
+    background-color 0.2s, border-color 0.2s, color 0.2s, filter 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.stApp button:is([data-testid^="stBaseButton-primary"], [data-testid^="stBaseButton-secondary"]) p {
+  font-weight: 700;
+  font-size: 0.98rem;
+}
+/* A long label ("Undo (costs a life)") wraps to a second line instead of ending in "…". */
+.stApp button:is([data-testid^="stBaseButton-primary"], [data-testid^="stBaseButton-secondary"]) [data-testid="stMarkdownContainer"],
+.stApp button:is([data-testid^="stBaseButton-primary"], [data-testid^="stBaseButton-secondary"]) p {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+/* Primary: violet, with a "lip" that presses down like a key. */
+.stApp button[data-testid^="stBaseButton-primary"] {
+  background: var(--mb-grad);
+  border: 0;
+  color: #fff;
+  box-shadow: 0 4px 0 var(--mb-lip), 0 12px 22px -12px rgba(108, 71, 255, 0.9);
+}
+.stApp button[data-testid^="stBaseButton-primary"]:hover:not(:disabled) {
+  background: var(--mb-grad);
+  color: #fff;
+  filter: brightness(1.07);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 0 var(--mb-lip), 0 16px 26px -12px rgba(108, 71, 255, 0.95);
+}
+.stApp button[data-testid^="stBaseButton-primary"]:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--mb-lip), 0 6px 12px -8px rgba(108, 71, 255, 0.8);
+}
+
+/* Secondary: a white key with a soft lip. */
+.stApp button[data-testid^="stBaseButton-secondary"] {
+  background: var(--mb-surface);
+  border: 1.5px solid var(--mb-border);
+  color: var(--mb-text);
+  box-shadow: 0 3px 0 var(--mb-border);
+}
+.stApp button[data-testid^="stBaseButton-secondary"]:hover:not(:disabled) {
+  background: var(--mb-surface);
+  border-color: var(--mb-primary);
+  color: var(--mb-primary-ink);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 0 var(--mb-border-strong);
+}
+.stApp button[data-testid^="stBaseButton-secondary"]:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--mb-border-strong);
+}
+.stApp button:is([data-testid^="stBaseButton-primary"], [data-testid^="stBaseButton-secondary"]):focus-visible {
+  outline: 3px solid var(--mb-primary-soft);
+  outline-offset: 2px;
+}
+.stApp button:is([data-testid^="stBaseButton-primary"], [data-testid^="stBaseButton-secondary"]):disabled {
+  background: var(--mb-track);
+  border-color: transparent;
+  color: var(--mb-faint);
+  box-shadow: none;
+  transform: none;
+  filter: none;
+  cursor: not-allowed;
+}
+
+/* Quiet buttons: leaving, cancelling, going back. */
+.stApp :is(.st-key-abort, .st-key-tr_abort, .st-key-cancel, .st-key-tr_cancel, .st-key-end_game, .st-key-kn_leave, .st-key-tb_leave, .st-key-kn_back, .st-key-tb_back) button[data-testid^="stBaseButton-secondary"] {
+  min-height: 38px;
+  padding: 0.35rem 0.95rem;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: var(--mb-muted);
+}
+.stApp :is(.st-key-abort, .st-key-tr_abort, .st-key-cancel, .st-key-tr_cancel, .st-key-end_game, .st-key-kn_leave, .st-key-tb_leave, .st-key-kn_back, .st-key-tb_back) button[data-testid^="stBaseButton-secondary"]:hover:not(:disabled) {
+  background: var(--mb-primary-soft);
+  border-color: transparent;
+  color: var(--mb-primary-ink);
+  box-shadow: none;
+  transform: none;
+}
+.stApp :is(.st-key-abort, .st-key-tr_abort, .st-key-end_game) button[data-testid^="stBaseButton-secondary"]:hover:not(:disabled) {
+  background: var(--mb-red-soft);
+  color: var(--mb-red);
+}
+
+/* ---------- 7. Pills and segmented controls ---------- */
+
+.stApp [data-testid="stButtonGroup"] > [role="radiogroup"]:has(> button[data-variant="pills"]) {
+  gap: 0.5rem;
+}
+.stApp [data-testid="stButtonGroup"] button[data-variant="pills"] {
+  min-height: 42px;
+  padding: 0.4rem 1rem 0.4rem 0.45rem;
+  border-radius: 999px;
+  border: 1.5px solid var(--mb-border);
+  background: var(--mb-surface);
+  color: var(--mb-text);
+  box-shadow: var(--mb-shadow-sm);
+  transition: transform 0.15s var(--mb-ease), border-color 0.2s, background-color 0.2s, color 0.2s, box-shadow 0.2s;
+}
+.stApp [data-testid="stButtonGroup"] button[data-variant="pills"]:not([data-mb-glyph]) {
+  padding-left: 1rem;
+}
+.stApp [data-testid="stButtonGroup"] button[data-variant="pills"] p {
+  font-weight: 650;
+  font-size: 0.93rem;
+}
+.stApp [data-testid="stButtonGroup"] button[data-variant="pills"]:hover:not(:disabled) {
+  border-color: var(--mb-primary);
+  color: var(--mb-primary-ink);
+  transform: translateY(-1px);
+}
+.stApp [data-testid="stButtonGroup"] button[data-variant="pills"]:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.stApp [data-testid="stButtonGroup"] button[data-variant="pills"][aria-checked="true"] {
+  background: var(--mb-primary-soft);
+  border-color: var(--mb-primary);
+  color: var(--mb-primary-ink);
+  box-shadow: 0 0 0 3px var(--mb-primary-soft);
+}
+/* A small maths symbol in front of an operation (set by design.js). */
+.stApp button[data-mb-glyph]::before {
+  content: attr(data-mb-glyph);
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 4px;
+  margin-right: 0.55rem;
+  border-radius: 999px;
+  background: var(--mb-primary-soft);
+  color: var(--mb-primary-ink);
+  font-family: var(--mb-display);
+  font-weight: 800;
+  font-size: 0.9rem;
+  line-height: 1;
+  transition: background-color 0.2s, color 0.2s, transform 0.3s var(--mb-spring);
+}
+.stApp button[data-mb-glyph][aria-checked="true"]::before {
+  background: var(--mb-grad);
+  color: #fff;
+  transform: rotate(-8deg) scale(1.05);
+}
+
+/* Segmented control: a soft track with a raised, white choice. */
+.stApp [data-testid="stButtonGroup"] > [role="radiogroup"]:has(> button[data-variant="segmented_control"]) {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: 3px;
+  padding: 4px;
+  border-radius: 15px;
+  background: var(--mb-track);
+  max-width: 100%;
+}
+.stApp [data-testid="stButtonGroup"] button[data-variant="segmented_control"] {
+  margin: 0 !important;
+  min-height: 38px;
+  padding: 0.3rem 1.05rem;
+  border: 0 !important;
+  border-radius: 11px !important;
+  background: transparent;
+  color: var(--mb-muted);
+  box-shadow: none;
+  transition: background-color 0.2s, color 0.2s, box-shadow 0.2s, transform 0.15s var(--mb-ease);
+}
+.stApp [data-testid="stButtonGroup"] button[data-variant="segmented_control"] p {
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+.stApp [data-testid="stButtonGroup"] button[data-variant="segmented_control"]:hover:not(:disabled) {
+  color: var(--mb-text);
+  background: rgba(255, 255, 255, 0.35);
+}
+.stApp [data-testid="stButtonGroup"] button[data-variant="segmented_control"][aria-checked="true"] {
+  background: var(--mb-raised);
+  color: var(--mb-primary-ink);
+  box-shadow: 0 1px 2px rgba(26, 22, 51, 0.12), 0 6px 14px -6px rgba(76, 47, 214, 0.35);
+}
+.stApp [data-testid="stButtonGroup"] button[data-variant="segmented_control"]:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.stApp [data-testid="stButtonGroup"] button[data-variant="segmented_control"]:disabled {
+  opacity: 0.45;
+}
+
+/* ---------- 8. Fields ---------- */
+
+.stApp :is([data-testid="stTextInputRootElement"], [data-testid="stNumberInputContainer"]),
+.stApp [data-testid="stSelectbox"] [role="group"] {
+  border-radius: 14px;
+  border: 1.5px solid var(--mb-border);
+  background: var(--mb-surface);
+  box-shadow: var(--mb-shadow-sm);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.stApp :is([data-testid="stTextInputRootElement"], [data-testid="stNumberInputContainer"]) :is(div, input),
+.stApp [data-testid="stSelectbox"] [role="group"] > * {
+  background: transparent;
+}
+.stApp :is([data-testid="stTextInputRootElement"], [data-testid="stNumberInputContainer"]):focus-within,
+.stApp [data-testid="stSelectbox"] [role="group"]:focus-within {
+  border-color: var(--mb-primary);
+  box-shadow: 0 0 0 4px var(--mb-primary-soft);
+}
+.stApp [data-testid="stTextInputRootElement"] input,
+.stApp [data-testid="stNumberInputContainer"] input {
+  color: var(--mb-text);
+  caret-color: var(--mb-primary);
+}
+.stApp [data-testid="stNumberInputContainer"] button {
+  border-radius: 10px;
+  margin: 3px;
+  color: var(--mb-primary-ink);
+}
+.stApp [data-testid="stNumberInputContainer"] button:hover:not(:disabled) {
+  background: var(--mb-primary-soft);
+  color: var(--mb-primary-ink);
+}
+
+/* Dropdown lists of select boxes. */
+[data-testid="stSelectboxVirtualDropdown"] {
+  border-radius: 16px;
+  padding: 6px;
+  box-shadow: var(--mb-shadow-lg);
+}
+[data-testid="stSelectboxVirtualDropdown"] [role="option"] {
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+/* Checkboxes (Trainer: which operations to mix). */
+.stApp [data-testid="stCheckbox"] label p {
+  font-weight: 650;
+}
+
+/* ---------- 9. The answer field: big, centred, made for numbers ---------- */
+
+.stApp :is(.st-key-answer, .st-key-tr_answer, .st-key-kn_answer, .st-key-tb_answer, .st-key-chain_answer) [data-testid="stTextInputRootElement"] {
+  min-height: 62px;
+  border-radius: 18px;
+  border-width: 2px;
+}
+.stApp :is(.st-key-answer, .st-key-tr_answer, .st-key-kn_answer, .st-key-tb_answer, .st-key-chain_answer) input {
+  height: 58px;
+  text-align: center;
+  font-family: var(--mb-display);
+  font-size: 1.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.stApp :is(.st-key-answer, .st-key-tr_answer, .st-key-kn_answer, .st-key-tb_answer, .st-key-chain_answer) input::placeholder {
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--mb-faint);
+}
+.stApp :is(.st-key-answer, .st-key-tr_answer, .st-key-kn_answer, .st-key-tb_answer) [data-testid="stWidgetLabel"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.stApp [data-testid="stForm"] [data-testid="stHorizontalBlock"] button {
+  min-height: 52px;
+}
+
+/* ---------- 10. The task card: the number you are solving ---------- */
+
+:is(
+  [data-testid="stElementContainer"]:has(> [data-testid="stHeading"]):has(+ [data-testid="stLayoutWrapper"] > [data-testid="stForm"]),
+  [data-testid="stElementContainer"]:has(> [data-testid="stHeading"]):has(+ [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"] [class*="choice_"])
+) > [data-testid="stHeading"] {
+  position: relative;
+  overflow: hidden;
+  padding: 2.1rem 1.25rem 2.2rem;
+  border-radius: var(--mb-radius-lg);
+  background: var(--mb-surface);
+  border: 1px solid var(--mb-border);
+  box-shadow: var(--mb-shadow-lg);
+  text-align: center;
+}
+:is(
+  [data-testid="stElementContainer"]:has(> [data-testid="stHeading"]):has(+ [data-testid="stLayoutWrapper"] > [data-testid="stForm"]),
+  [data-testid="stElementContainer"]:has(> [data-testid="stHeading"]):has(+ [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"] [class*="choice_"])
+) > [data-testid="stHeading"]::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 5px;
+  background: var(--mb-grad-text);
+}
+:is(
+  [data-testid="stElementContainer"]:has(> [data-testid="stHeading"]):has(+ [data-testid="stLayoutWrapper"] > [data-testid="stForm"]),
+  [data-testid="stElementContainer"]:has(> [data-testid="stHeading"]):has(+ [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"] [class*="choice_"])
+) > [data-testid="stHeading"] h2 {
+  padding: 0;
+  font-size: clamp(2.3rem, 10.5vw, 4rem);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+}
+:is(
+  [data-testid="stElementContainer"]:has(> [data-testid="stHeading"]):has(+ [data-testid="stLayoutWrapper"] > [data-testid="stForm"]),
+  [data-testid="stElementContainer"]:has(> [data-testid="stHeading"]):has(+ [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"] [class*="choice_"])
+) > [data-testid="stHeading"] h3 {
+  padding: 0;
+  font-size: clamp(1.25rem, 4.8vw, 1.65rem);
+  line-height: 1.4;
+}
+/* design.js replays these when the task changes. */
+[data-mb-pop] {
+  animation: mb-pop 0.42s var(--mb-spring);
+}
+[data-mb-shake] {
+  animation: mb-shake 0.45s ease-in-out;
+}
+
+/* Countdown 3 - 2 - 1 */
+.stApp:has(:is(.st-key-cancel, .st-key-tr_cancel)) [data-testid="stMain"] [data-testid="stHeading"] {
+  padding: 3.2rem 0 1.4rem;
+}
+.stApp:has(:is(.st-key-cancel, .st-key-tr_cancel)) [data-testid="stMain"] [data-testid="stHeading"] h2 {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 9.5rem;
+  height: 9.5rem;
+  margin: 0 auto;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 5rem;
+  font-weight: 800;
+  color: #fff;
+  background: var(--mb-grad);
+  box-shadow: 0 0 0 12px var(--mb-primary-soft), 0 0 0 26px color-mix(in srgb, var(--mb-primary-soft) 45%, transparent), var(--mb-shadow-lg);
+  animation: mb-pulse 1s ease-in-out infinite;
+}
+.stApp:has(:is(.st-key-cancel, .st-key-tr_cancel)) [data-testid="stMain"] [data-testid="stHeading"] h2::before {
+  content: "Get ready";
+  position: absolute;
+  top: -3.3rem;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--mb-muted);
+}
+.stApp :is(.st-key-cancel, .st-key-tr_cancel) {
+  align-self: center;
+}
+
+/* ---------- 11. Cards, metrics, tables, progress, alerts ---------- */
+
+/* st.container(border=True), marked by design.js */
+.stApp [data-mb-card] {
+  background: var(--mb-surface);
+  border-color: var(--mb-border) !important;
+  border-radius: var(--mb-radius) !important;
+  box-shadow: var(--mb-shadow);
+  padding: 1.1rem 1.3rem !important;
+}
+.stApp [data-mb-example] {
+  background:
+    radial-gradient(420px 160px at 100% 0%, var(--mb-primary-soft), transparent 70%),
+    var(--mb-surface);
+  border-style: dashed !important;
+  border-color: var(--mb-border-strong) !important;
+}
+.stApp [data-mb-example] [data-testid="stMarkdownContainer"] strong {
+  font-family: var(--mb-display);
+  font-size: 1.65rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* Metrics are small cards. */
+.stApp [data-testid="stMetric"] {
+  height: 100%;
+  padding: 0.85rem 1rem 0.9rem;
+  border-radius: var(--mb-radius);
+  background: var(--mb-surface);
+  border: 1px solid var(--mb-border);
+  box-shadow: var(--mb-shadow-sm);
+}
+.stApp [data-testid="stMetricLabel"] p {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--mb-muted);
+}
+.stApp [data-testid="stMetricValue"] {
+  font-family: var(--mb-display);
+  color: var(--mb-text);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+/* The first number of a result (Score, Correct, ...) stands out. */
+.stApp [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"]:nth-child(5) [data-testid="stMetric"]) > [data-testid="stColumn"]:first-child [data-testid="stMetric"],
+.stApp [data-testid="stElementContainer"]:has([data-testid="stHeading"]) ~ [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"]:nth-child(3):last-child [data-testid="stMetric"]) > [data-testid="stColumn"]:first-child [data-testid="stMetric"] {
+  background: var(--mb-grad);
+  border-color: transparent;
+  box-shadow: 0 14px 30px -14px rgba(108, 71, 255, 0.9);
+}
+.stApp [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"]:nth-child(5) [data-testid="stMetric"]) > [data-testid="stColumn"]:first-child [data-testid="stMetric"] :is([data-testid="stMetricLabel"] p, [data-testid="stMetricValue"]),
+.stApp [data-testid="stElementContainer"]:has([data-testid="stHeading"]) ~ [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"]:nth-child(3):last-child [data-testid="stMetric"]) > [data-testid="stColumn"]:first-child [data-testid="stMetric"] :is([data-testid="stMetricLabel"] p, [data-testid="stMetricValue"]) {
+  color: #fff;
+}
+
+/* Tests: the seconds left as a ring (design.js sets --mb-p from 1 to 0). */
+.stApp [data-mb-timer] {
+  width: fit-content;
+  margin: 0 auto;
+  padding: 0.45rem 1.2rem 0.45rem 0.45rem;
+  border-radius: 999px;
+}
+.stApp [data-mb-timer] > div {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 0.75rem;
+}
+.stApp [data-mb-timer] [data-testid="stMetricValue"] {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  font-size: 1.45rem;
+  background:
+    radial-gradient(closest-side, var(--mb-surface) 80%, transparent 81% 100%),
+    conic-gradient(var(--mb-ring) calc(var(--mb-p) * 360deg), var(--mb-track) 0);
+  transition: --mb-p 0.95s linear;
+}
+.stApp [data-mb-timer] [data-testid="stMetricValue"] > * {
+  overflow: visible;
+}
+.stApp [data-mb-urgent] {
+  --mb-ring: var(--mb-red);
+}
+.stApp [data-mb-urgent] [data-testid="stMetricValue"] {
+  color: var(--mb-red);
+  animation: mb-pulse 1s ease-in-out infinite;
+}
+
+/* Tables (highscores, textbook tables): clean rows, numbers centred. */
+.stApp [data-testid="stTable"] {
+  border-radius: var(--mb-radius);
+  background: var(--mb-surface);
+  border: 1px solid var(--mb-border);
+  box-shadow: var(--mb-shadow-sm);
+  overflow: hidden;
+}
+.stApp [data-testid="stTable"] > div {
+  overflow-x: auto;
+}
+.stApp [data-testid="stTable"] table {
+  width: 100%;
+  border: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.stApp [data-testid="stTable"] :is(th, td) {
+  border: 0 !important;
+  border-bottom: 1px solid var(--mb-border) !important;
+  padding: 0.72rem 0.85rem !important;
+  text-align: center !important;
+  white-space: nowrap;
+}
+.stApp [data-testid="stTable"] thead th {
+  background: var(--mb-surface-2);
+}
+.stApp [data-testid="stTable"] thead th p {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--mb-muted);
+}
+.stApp [data-testid="stTable"] tbody th {
+  text-align: left !important;
+  font-weight: 700;
+  color: var(--mb-text);
+}
+.stApp [data-testid="stTable"] tbody td {
+  font-family: var(--mb-display);
+  font-weight: 700;
+  font-size: 1.02rem;
+  font-variant-numeric: tabular-nums;
+}
+.stApp [data-testid="stTable"] tbody td[data-mb-empty] {
+  color: var(--mb-faint);
+  font-weight: 500;
+}
+.stApp [data-testid="stTable"] tbody tr:last-child > * {
+  border-bottom: 0 !important;
+}
+.stApp [data-testid="stTable"] tbody tr {
+  transition: background-color 0.15s;
+}
+.stApp [data-testid="stTable"] tbody tr:hover {
+  background: var(--mb-primary-soft);
+}
+
+/* Data tables (Trainer history and review) and charts sit on cards too. */
+.stApp [data-testid="stDataFrame"] {
+  border-radius: var(--mb-radius-sm);
+  box-shadow: var(--mb-shadow-sm);
+}
+/* Charts: no padding at the sides, because Streamlit draws them exactly as wide
+   as the column; side padding would cut off the right edge (like "Mon"). */
+.stApp :is([data-testid="stVegaLiteChart"], [data-testid="stArrowVegaLiteChart"], [data-testid="stPlotlyChart"]) {
+  padding: 0.85rem 0 0.4rem;
+  overflow: hidden;
+  border-radius: var(--mb-radius);
+  background: var(--mb-surface);
+  border: 1px solid var(--mb-border);
+  box-shadow: var(--mb-shadow-sm);
+}
+
+/* Progress: a thick, rounded bar with a moving shine. */
+.stApp [data-testid="stProgress"] [role="progressbar"] > div {
+  height: 12px;
+  border-radius: 999px;
+  background: var(--mb-track);
+}
+.stApp [data-testid="stProgress"] [role="progressbar"] > div > div {
+  height: 12px;
+  border-radius: 999px;
+  background-color: var(--mb-primary);
+  background-image:
+    linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.28) 50%, rgba(255, 255, 255, 0) 100%),
+    var(--mb-grad);
+  background-size: 40px 100%, 100% 100%;
+  animation: mb-shine 1.2s linear infinite;
+  transition: width 0.5s var(--mb-ease);
+}
+
+/* Messages: rounded, an accent bar on the left, they slide in. */
+.stApp [data-testid="stAlert"] {
+  animation: mb-rise 0.35s var(--mb-ease) both;
+}
+.stApp [data-testid="stAlertContainer"] {
+  border-radius: 16px;
+  padding: 0.95rem 1.1rem 0.95rem 1.25rem;
+  box-shadow: inset 4px 0 0 currentColor, var(--mb-shadow-sm);
+}
+.stApp [data-testid="stAlert"] p {
+  line-height: 1.55;
+}
+.stApp [data-testid="stAlert"] p strong {
+  font-family: var(--mb-display);
+  font-size: 1.08em;
+}
+/* A win (new highscore, solved, found) gets a trophy and warm colours (design.js). */
+.stApp [data-mb-win] [data-testid="stAlertContainer"] {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 1rem 1.2rem;
+  background: var(--mb-grad-warm);
+  color: #fff;
+  box-shadow: 0 16px 32px -16px rgba(255, 107, 139, 0.95);
+  animation: mb-pop 0.5s var(--mb-spring) both;
+}
+.stApp [data-mb-win] [data-testid="stAlertContainer"]::before {
+  content: "🏆";
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.22);
+  font-size: 1.45rem;
+}
+.stApp [data-mb-win] p {
+  color: #fff;
+  font-family: var(--mb-display);
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+/* Badges next to card titles (Knowledge). */
+.stApp [data-testid="stMarkdownContainer"] span[class*="Badge"],
+.stApp [data-testid="stMarkdownContainer"] .stBadge {
+  border-radius: 999px;
+}
+
+/* Tabs (sign in / create account): a segmented switch. */
+.stApp [data-testid="stTabs"] [role="tablist"] {
+  gap: 3px;
+  padding: 4px;
+  border: 0;
+  border-radius: 15px;
+  background: var(--mb-track);
+  box-shadow: none;
+}
+.stApp [data-testid="stTabs"] [role="tablist"]::before,
+.stApp [data-testid="stTabs"] [role="tablist"]::after {
+  display: none;
+}
+.stApp [data-testid="stTabs"] [data-testid="stTab"] {
+  flex: 1 1 0;
+  justify-content: center;
+  height: 42px;
+  margin: 0;
+  padding: 0 1rem;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--mb-muted);
+  transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
+}
+.stApp [data-testid="stTabs"] [data-testid="stTab"] p {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.stApp [data-testid="stTabs"] [data-testid="stTab"]:hover {
+  color: var(--mb-text);
+}
+.stApp [data-testid="stTabs"] [data-testid="stTab"][aria-selected="true"] {
+  background: var(--mb-raised);
+  color: var(--mb-primary-ink);
+  box-shadow: 0 1px 2px rgba(26, 22, 51, 0.12), 0 6px 14px -6px rgba(76, 47, 214, 0.35);
+}
+/* Streamlit's underline under the chosen tab is not needed on a switch. */
+.stApp [data-testid="stTabs"] [data-testid="stTab"] > div:not([data-testid]) {
+  display: none;
+}
+.stApp [data-testid="stTabs"] [data-testid="stTabPanel"] {
+  padding-top: 1.1rem;
+}
+
+/* ---------- 12. Account panel (sidebar) ---------- */
+
+[data-testid="stSidebar"] {
+  border-right: 1px solid var(--mb-border);
+  box-shadow: var(--mb-shadow-lg);
+}
+[data-testid="stSidebarUserContent"] {
+  padding-top: 0.5rem;
+}
+[data-testid="stSidebarUserContent"]::before {
+  content: attr(data-mb-initial);
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 1rem;
+  border-radius: 50%;
+  background: var(--mb-grad-warm);
+  color: #fff;
+  font-family: var(--mb-display);
+  font-size: 1.7rem;
+  font-weight: 800;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.14), 0 12px 24px -12px rgba(255, 107, 139, 0.9);
+}
+[data-testid="stSidebarUserContent"] [data-testid="stMarkdownContainer"] p {
+  font-weight: 700;
+  font-size: 1.02rem;
+}
+[data-testid="stSidebarUserContent"] .st-key-sign_out,
+[data-testid="stSidebarUserContent"] .st-key-sign_out :is(.stButton, button) {
+  width: 100% !important;
+}
+[data-testid="stSidebarUserContent"] .st-key-sign_out button:hover:not(:disabled) {
+  border-color: var(--mb-red);
+  color: var(--mb-red);
+}
+
+/* ---------- 13. Knowledge and Textbook ---------- */
+
+/* Category tiles */
+.stApp :is([class*="st-key-kn_category_"], [class*="st-key-tb_category_"]) button {
+  min-height: 112px;
+  padding: 1rem 1.1rem;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  text-align: left;
+}
+.stApp :is([class*="st-key-kn_category_"], [class*="st-key-tb_category_"]) button > div,
+.stApp :is([class*="st-key-kn_trick_"], [class*="st-key-tb_article_"], [class*="st-key-tb_trick_"]) button > div {
+  flex: 1 1 auto;
+  width: 100%;
+  justify-content: flex-start;
+}
+.stApp :is([class*="st-key-kn_category_"], [class*="st-key-tb_category_"]) button p {
+  font-family: var(--mb-display);
+  font-size: 1.08rem;
+  font-weight: 700;
+  text-align: left;
+}
+.stApp :is([class*="st-key-kn_category_"], [class*="st-key-tb_category_"]) button[data-mb-glyph]::before {
+  min-width: 42px;
+  height: 42px;
+  margin: 0;
+  border-radius: 13px;
+  font-size: 1.15rem;
+  background: var(--mb-grad);
+  color: #fff;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.16);
+}
+.stApp :is([class*="st-key-kn_category_"], [class*="st-key-tb_category_"]) button:hover:not(:disabled)[data-mb-glyph]::before {
+  transform: rotate(-8deg) scale(1.06);
+}
+
+/* List rows (tricks, articles) with a chevron. */
+.stApp :is([class*="st-key-kn_trick_"], [class*="st-key-tb_article_"], [class*="st-key-tb_trick_"]) button {
+  min-height: 58px;
+  justify-content: space-between;
+  padding: 0.6rem 0.8rem 0.6rem 1.1rem;
+  text-align: left;
+}
+.stApp :is([class*="st-key-kn_trick_"], [class*="st-key-tb_article_"], [class*="st-key-tb_trick_"]) button::after {
+  content: "";
+  flex: none;
+  width: 30px;
+  height: 30px;
+  margin-left: 0.75rem;
+  border-radius: 50%;
+  background-color: var(--mb-primary-soft);
+  background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236c47ff' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9.5 6l6 6-6 6'/%3E%3C/svg%3E");
+  background-size: 16px;
+  background-position: center;
+  background-repeat: no-repeat;
+  transition: transform 0.2s var(--mb-ease);
+}
+.stApp :is([class*="st-key-kn_trick_"], [class*="st-key-tb_article_"], [class*="st-key-tb_trick_"]) button:hover:not(:disabled)::after {
+  transform: translateX(3px);
+}
+.stApp :is([class*="st-key-kn_trick_"], [class*="st-key-tb_article_"], [class*="st-key-tb_trick_"]) button p {
+  text-align: left;
+}
+
+/* ---------- 14. Games ---------- */
+
+/* Lives: big hearts. */
+.stApp :is(.st-key-sudoku_header, .st-key-hunt_header, .st-key-magic_header, .st-key-chain_header) [data-testid="stCaptionContainer"] p {
+  font-size: 1.05rem;
+  letter-spacing: 0.12em;
+}
+.stApp :is(.st-key-sudoku_header, .st-key-hunt_header, .st-key-magic_header, .st-key-chain_header) [data-testid="stMetric"] {
+  padding: 0.7rem 0.9rem;
+}
+.stApp :is(.st-key-sudoku_header, .st-key-hunt_header, .st-key-magic_header, .st-key-chain_header) [data-testid="stMetricValue"] {
+  font-size: 1.6rem;
+}
+/* The hearts sit inside the Lives card, on the right. */
+.stApp :is(.st-key-sudoku_header, .st-key-hunt_header, .st-key-magic_header, .st-key-chain_header) [data-testid="stColumn"]:has([data-testid="stCaptionContainer"]) > [data-testid="stVerticalBlock"] {
+  position: relative;
+}
+.stApp :is(.st-key-sudoku_header, .st-key-hunt_header, .st-key-magic_header, .st-key-chain_header) [data-testid="stColumn"] [data-testid="stElementContainer"]:has([data-testid="stCaptionContainer"]) {
+  position: absolute;
+  right: 0.95rem;
+  bottom: 0.95rem;
+  width: auto;
+  margin: 0;
+}
+/* Streamlit pulls the last text up by 1rem; here that would push the hearts out of the card. */
+.stApp :is(.st-key-sudoku_header, .st-key-hunt_header, .st-key-magic_header, .st-key-chain_header) [data-testid="stCaptionContainer"] {
+  margin: 0 !important;
+}
+.stApp :is(.st-key-sudoku_header, .st-key-hunt_header, .st-key-magic_header, .st-key-chain_header) [data-testid="stCaptionContainer"] p {
+  margin: 0;
+  text-align: right;
+  line-height: 1;
+}
+
+/* Sudoku and Magic Square boards */
+.stApp :is(.st-key-sudoku_grid, .st-key-magic_grid) {
+  margin: 0 auto;
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 22px;
+  background: var(--mb-surface);
+  border: 1px solid var(--mb-border);
+  box-shadow: var(--mb-shadow);
+}
+.stApp .sudoku-cell {
+  font-family: var(--mb-display);
+  font-variant-numeric: tabular-nums;
+  border-radius: 0.65rem;
+  transition: background-color 0.3s, color 0.3s;
+}
+.stApp .sudoku-given {
+  background: var(--mb-surface-2);
+  color: var(--mb-text);
+  box-shadow: inset 0 0 0 1px var(--mb-border);
+}
+.stApp .sudoku-correct {
+  background: var(--mb-green);
+  color: #fff;
+  animation: mb-pop 0.45s var(--mb-spring);
+}
+.stApp .sudoku-missed {
+  background: var(--mb-red-soft);
+  color: var(--mb-red);
+  border: 2px dashed var(--mb-red);
+}
+.stApp .st-key-sudoku_grid [data-testid="stTextInputRootElement"] {
+  border: 1.5px solid var(--mb-border-strong);
+  border-radius: 0.65rem;
+  background: var(--mb-surface);
+  box-shadow: inset 0 -2px 0 var(--mb-border);
+}
+.stApp .st-key-sudoku_grid [data-testid="stTextInputRootElement"]:focus-within {
+  border-color: var(--mb-primary);
+  box-shadow: 0 0 0 3px var(--mb-primary-soft);
+}
+.stApp .st-key-sudoku_grid input {
+  font-family: var(--mb-display);
+  color: var(--mb-primary-ink);
+}
+
+/* Game tiles: Number Hunt numbers and operations, Magic Square cells and keypad. */
+.stApp :is(.st-key-hunt_numbers, .st-key-hunt_operations, .st-key-magic_grid, .st-key-magic_keypad) button {
+  padding-left: 0;
+  padding-right: 0;
+  border-radius: 16px;
+}
+.stApp :is(.st-key-hunt_numbers, .st-key-hunt_operations, .st-key-magic_grid, .st-key-magic_keypad) button p {
+  font-family: var(--mb-display);
+  font-variant-numeric: tabular-nums;
+}
+.stApp .st-key-hunt_numbers button {
+  min-height: 3.6rem;
+}
+.stApp .st-key-hunt_numbers button p {
+  font-size: 1.5rem;
+}
+.stApp .st-key-hunt_operations button p {
+  font-size: 1.45rem;
+  color: var(--mb-primary-ink);
+}
+.stApp .st-key-magic_grid button p {
+  color: var(--mb-faint);
+}
+/* The chosen number, operation or cell is blue (the games say so; red means a wrong step). */
+.stApp :is(.st-key-hunt_numbers, .st-key-hunt_operations, .st-key-magic_grid) button[kind="primary"],
+.stApp :is(.st-key-hunt_numbers, .st-key-hunt_operations, .st-key-magic_grid) button[kind="primary"]:hover:not(:disabled) {
+  background: linear-gradient(135deg, #5ea8ff 0%, #2f80ed 55%, #2563eb 100%);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 4px 0 #1d4fbf, 0 0 0 4px rgba(47, 128, 237, 0.2);
+}
+.stApp :is(.st-key-hunt_numbers, .st-key-hunt_operations, .st-key-magic_grid) button[kind="primary"] p {
+  color: #fff;
+}
+.stApp .st-key-magic_keypad [data-testid="stHorizontalBlock"] {
+  justify-content: center;
+}
+.stApp .st-key-magic_keypad button {
+  border-radius: 50%;
+  aspect-ratio: 1;
+  min-height: 3.2rem;
+}
+.stApp .st-key-hunt_numbers {
+  padding: 0.6rem;
+  border-radius: 20px;
+  background: var(--mb-surface-2);
+  border: 1px solid var(--mb-border);
+}
+.stApp .hunt-target {
+  font-family: var(--mb-display);
+}
+.stApp .hunt-steps {
+  gap: 0.45rem;
+}
+.stApp .hunt-step {
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  background: var(--mb-green-soft);
+  color: var(--mb-green);
+  font-family: var(--mb-display);
+  font-weight: 700;
+  animation: mb-pop 0.4s var(--mb-spring);
+}
+
+/* Number Chain: the big number. */
+.stApp .chain-big {
+  font-family: var(--mb-display);
+  font-size: clamp(3rem, 15vw, 5rem);
+  letter-spacing: -0.03em;
+  padding: 2.2rem 1rem;
+  border-radius: var(--mb-radius-lg);
+  background: var(--mb-surface);
+  border: 1px solid var(--mb-border);
+  box-shadow: var(--mb-shadow-lg);
+}
+.stApp .chain-big {
+  color: var(--mb-primary-ink);
+}
+
+/* ---------- 15. Sign in ---------- */
+
+.stApp:has(.st-key-signin_submit) [data-testid="stMainBlockContainer"] {
+  max-width: 460px;
+  padding-top: max(3rem, 9vh) !important;
+}
+.stApp:has(.st-key-signin_submit) [data-testid="stMain"] {
+  isolation: isolate;
+}
+.stApp:has(.st-key-signin_submit) [data-testid="stMain"] h1 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  font-size: 2.6rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  padding-bottom: 0.25rem;
+}
+.stApp:has(.st-key-signin_submit) [data-testid="stMain"] h1::before {
+  content: "";
+  width: 84px;
+  height: 84px;
+  margin-bottom: 1.1rem;
+  border-radius: 26px;
+  background:
+    url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none'%3E%3Ccircle cx='11.5' cy='13' r='2.5' fill='white'/%3E%3Ccircle cx='20.5' cy='13' r='2.5' fill='white'/%3E%3Cpath d='M9.5 19.5c3.6 3.8 9.4 3.8 13 0' stroke='white' stroke-width='2.8' stroke-linecap='round'/%3E%3Cpath d='M25.5 3.5v5M23 6h5' stroke='%23FFD166' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E") center / 62% no-repeat,
+    var(--mb-grad);
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.18), 0 20px 40px -16px rgba(108, 71, 255, 0.9);
+  transform: rotate(-6deg);
+  animation: mb-pop 0.6s var(--mb-spring) both;
+}
+.stApp:has(.st-key-signin_submit) [data-testid="stMain"] h1::after {
+  content: "Your daily workout for numbers.";
+  margin-top: 0.45rem;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--mb-muted);
+}
+.stApp:has(.st-key-signin_submit) [data-testid="stTabs"] {
+  padding: 1.1rem 1.25rem 1.35rem;
+  border-radius: var(--mb-radius-lg);
+  background: var(--mb-glass);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--mb-border);
+  box-shadow: var(--mb-shadow-lg);
+}
+.stApp:has(.st-key-signin_submit) :is(.st-key-signin_submit, .st-key-signup_submit),
+.stApp:has(.st-key-signin_submit) :is(.st-key-signin_submit, .st-key-signup_submit) :is(.stButton, button) {
+  width: 100%;
+}
+.stApp:has(.st-key-signin_submit) :is(.st-key-signin_submit, .st-key-signup_submit) button {
+  min-height: 52px;
+  margin-top: 0.35rem;
+}
+.stApp:has(.st-key-signin_submit) [data-testid="stTextInputRootElement"] {
+  min-height: 50px;
+}
+
+[data-testid="stElementContainer"]:has(.mb-decor) {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  margin: 0;
+  pointer-events: none;
+}
+.mb-decor {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.mb-decor span {
+  position: absolute;
+  font-family: var(--mb-display);
+  font-weight: 800;
+  color: var(--mb-primary);
+  opacity: 0.1;
+  animation: mb-float 9s ease-in-out infinite;
+}
+.mb-decor span:nth-child(1) { left: 6%; top: 12%; font-size: 4.5rem; --r: -12deg; }
+.mb-decor span:nth-child(2) { left: 84%; top: 9%; font-size: 3.6rem; --r: 14deg; animation-delay: -2s; color: var(--mb-accent); }
+.mb-decor span:nth-child(3) { left: 12%; top: 64%; font-size: 3.4rem; --r: 8deg; animation-delay: -4s; }
+.mb-decor span:nth-child(4) { left: 78%; top: 58%; font-size: 5rem; --r: -6deg; animation-delay: -1s; }
+.mb-decor span:nth-child(5) { left: 44%; top: 86%; font-size: 3rem; --r: 10deg; animation-delay: -6s; color: var(--mb-accent); }
+.mb-decor span:nth-child(6) { left: 90%; top: 34%; font-size: 2.6rem; --r: -18deg; animation-delay: -3s; }
+.mb-decor span:nth-child(7) { left: 3%; top: 38%; font-size: 2.6rem; --r: 0deg; animation-delay: -5s; }
+.mb-decor span:nth-child(8) { left: 66%; top: 84%; font-size: 3.2rem; --r: 12deg; animation-delay: -7s; }
+.mb-decor span:nth-child(9) { left: 26%; top: 6%; font-size: 2.4rem; --r: -10deg; animation-delay: -8s; color: var(--mb-accent); }
+.mb-decor span:nth-child(10) { left: 22%; top: 88%; font-size: 2.6rem; --r: 6deg; animation-delay: -2.5s; }
+.mb-decor span:nth-child(11) { left: 60%; top: 4%; font-size: 2.8rem; --r: -4deg; animation-delay: -4.5s; }
+.mb-decor span:nth-child(12) { left: 94%; top: 78%; font-size: 3rem; --r: 16deg; animation-delay: -6.5s; color: var(--mb-accent); }
+
+/* Confetti and the "+1" float (design.js). */
+.mb-confetti {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 1000001;
+}
+.mb-plus {
+  position: fixed;
+  z-index: 1000002;
+  pointer-events: none;
+  font-family: var(--mb-display);
+  font-size: 1.9rem;
+  font-weight: 800;
+  color: var(--mb-green);
+  text-shadow: 0 6px 18px rgba(18, 161, 107, 0.35);
+  animation: mb-plus 0.9s var(--mb-ease) forwards;
+}
+
+/* ---------- 16. Laptops: room to breathe ---------- */
+
+@media (min-width: 900px) {
+  [data-testid="stMain"] h2 {
+    margin-top: 0.4rem;
+  }
+}
+
+/* ---------- 17. Phones ---------- */
+
+@media (max-width: 640px) {
+  [data-testid="stMainBlockContainer"] {
+    padding: 0.4rem 1rem calc(var(--mb-nav-h) + 2.25rem + env(safe-area-inset-bottom)) !important;
+  }
+  .mb-account {
+    padding: 0.22rem;
+  }
+  .mb-account-text {
+    display: none;
+  }
+  .mb-wordmark {
+    font-size: 1.3rem;
+  }
+
+  /* Tab bar at the bottom, in reach of the thumb. */
+  .st-key-nav {
+    position: fixed;
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 990;
+    width: 100% !important;
+    margin: 0;
+  }
+  .st-key-nav [data-testid="stRadio"] {
+    width: 100%;
+  }
+  .st-key-nav [data-testid="stRadioGroup"] {
+    width: 100%;
+    justify-content: space-around;
+    gap: 0;
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+    border-radius: 22px 22px 0 0;
+    border-width: 1px 0 0;
+    box-shadow: 0 -10px 30px -14px rgba(26, 22, 51, 0.3);
+  }
+  .st-key-nav [data-testid="stRadioGroup"] > div {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    justify-content: center;
+  }
+  .st-key-nav [data-testid="stRadioOption"] {
+    width: 100%;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    padding: 7px 0 5px;
+    border-radius: 14px;
+  }
+  .st-key-nav [data-testid="stRadioOption"]::before {
+    width: 22px;
+    height: 22px;
+    transition: transform 0.3s var(--mb-spring);
+  }
+  .st-key-nav [data-testid="stRadioOption"]::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    top: 3px;
+    left: 50%;
+    width: 54px;
+    height: 32px;
+    border-radius: 999px;
+    background: var(--mb-primary-soft);
+    transform: translateX(-50%) scaleX(0.4);
+    opacity: 0;
+    transition: transform 0.3s var(--mb-spring), opacity 0.2s;
+  }
+  .st-key-nav [data-testid="stRadioOption"] p {
+    font-size: 0.69rem;
+    letter-spacing: 0.01em;
+  }
+  .st-key-nav [data-testid="stRadioOption"]:hover {
+    background: transparent;
+  }
+  .st-key-nav [data-testid="stRadioOption"]:is([data-selected="true"], :has(input:checked)) {
+    background: transparent;
+    box-shadow: none;
+    color: var(--mb-primary-ink);
+  }
+  .st-key-nav [data-testid="stRadioOption"]:is([data-selected="true"], :has(input:checked))::before {
+    transform: translateY(-1px) scale(1.06);
+  }
+  .st-key-nav [data-testid="stRadioOption"]:is([data-selected="true"], :has(input:checked))::after {
+    opacity: 1;
+    transform: translateX(-50%) scaleX(1);
+  }
+
+  /* Rows of numbers wrap two by two instead of stacking one by one. */
+  .stApp [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] [data-testid="stMetric"]):not(:is(.st-key-sudoku_header, .st-key-hunt_header, .st-key-magic_header, .st-key-chain_header) *) {
+    flex-wrap: wrap !important;
+    gap: 0.6rem !important;
+  }
+  .stApp [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] [data-testid="stMetric"]):not(:is(.st-key-sudoku_header, .st-key-hunt_header, .st-key-magic_header, .st-key-chain_header) *) > [data-testid="stColumn"] {
+    flex: 1 1 calc(50% - 0.3rem) !important;
+    width: calc(50% - 0.3rem) !important;
+    min-width: calc(50% - 0.3rem) !important;
+  }
+  /* With an odd number, the first one (the main result) gets the full width. */
+  .stApp [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"]:nth-child(odd):last-child [data-testid="stMetric"]):not(:is(.st-key-sudoku_header, .st-key-hunt_header, .st-key-magic_header, .st-key-chain_header) *) > [data-testid="stColumn"]:first-child {
+    flex-basis: 100% !important;
+    width: 100% !important;
+    min-width: 100% !important;
+  }
+  .stApp [data-testid="stMetric"] {
+    padding: 0.7rem 0.85rem;
+  }
+  /* "Press Enter to submit form" means nothing on a touch keyboard. */
+  .stApp :is(.st-key-answer, .st-key-tr_answer, .st-key-kn_answer, .st-key-tb_answer, .st-key-chain_answer) [data-testid="InputInstructions"] {
+    display: none;
+  }
+  .stApp [data-testid="stMetricValue"] {
+    font-size: 1.55rem;
+  }
+  /* Number Chain has three narrow cards: smaller hearts, so they never cover the number. */
+  .stApp .st-key-chain_header [data-testid="stColumn"] [data-testid="stElementContainer"]:has([data-testid="stCaptionContainer"]) {
+    right: 0.6rem;
+    bottom: 1.05rem;
+  }
+  .stApp .st-key-chain_header [data-testid="stCaptionContainer"] p {
+    font-size: 0.78rem;
+    letter-spacing: 0;
+  }
+
+  /* Two buttons side by side stay side by side (Submit / Skip, Undo / Reset, ...). */
+  .stApp [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"]:nth-child(2):last-child):has(> [data-testid="stColumn"]:first-child :is([data-testid="stButton"], [data-testid="stFormSubmitButton"])):has(> [data-testid="stColumn"]:last-child :is([data-testid="stButton"], [data-testid="stFormSubmitButton"])) {
+    flex-wrap: nowrap !important;
+    gap: 0.6rem !important;
+  }
+  .stApp [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"]:nth-child(2):last-child):has(> [data-testid="stColumn"]:first-child :is([data-testid="stButton"], [data-testid="stFormSubmitButton"])):has(> [data-testid="stColumn"]:last-child :is([data-testid="stButton"], [data-testid="stFormSubmitButton"])) > [data-testid="stColumn"] {
+    flex: 1 1 0 !important;
+    width: auto !important;
+    min-width: 0 !important;
+  }
+
+  /* "← Previous  2 / 5  Next →" stays one row. */
+  .stApp [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"]:first-child [class*="prev"]):has(> [data-testid="stColumn"]:last-child [class*="next"]) {
+    flex-wrap: nowrap !important;
+    align-items: center;
+    gap: 0.5rem !important;
+  }
+  .stApp [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"]:first-child [class*="prev"]):has(> [data-testid="stColumn"]:last-child [class*="next"]) > [data-testid="stColumn"] {
+    flex: 1 1 0 !important;
+    width: auto !important;
+    min-width: 0 !important;
+  }
+  .stApp [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"]:first-child [class*="prev"]):has(> [data-testid="stColumn"]:last-child [class*="next"]) > [data-testid="stColumn"]:nth-child(2) {
+    flex: 0 0 auto !important;
+  }
+
+  /* Choices: full width segmented controls, wrapping pills. */
+  .stApp [data-testid="stElementContainer"]:has(> [data-testid="stButtonGroup"] button[data-variant="segmented_control"]),
+  .stApp [data-testid="stButtonGroup"]:has(button[data-variant="segmented_control"]) {
+    width: 100% !important;
+  }
+  .stApp [data-testid="stButtonGroup"] > [role="radiogroup"]:has(> button[data-variant="segmented_control"]) {
+    display: flex;
+    width: 100%;
+  }
+  .stApp [data-testid="stButtonGroup"] button[data-variant="segmented_control"] {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0.3rem 0.4rem;
+  }
+  .stApp [data-testid="stButtonGroup"] button[data-variant="segmented_control"] p {
+    font-size: 0.84rem;
+    white-space: normal;
+    line-height: 1.15;
+  }
+  .stApp [data-testid="stButtonGroup"] button[data-variant="pills"] {
+    min-height: 40px;
+  }
+
+  /* Main actions are full width and easy to hit. */
+  .stApp [data-testid="stMain"] [data-testid="stElementContainer"]:has(> .stButton > button[data-testid="stBaseButton-primary"]),
+  .stApp [data-testid="stMain"] .stButton:has(> button[data-testid="stBaseButton-primary"]) {
+    width: 100%;
+  }
+  .stApp [data-testid="stMain"] .stButton > button[data-testid="stBaseButton-primary"] {
+    width: 100%;
+    min-height: 52px;
+  }
+  .stApp [data-testid="stMain"] [data-testid="stElementContainer"]:has(> [data-testid="stFormSubmitButton"]),
+  .stApp [data-testid="stMain"] [data-testid="stFormSubmitButton"],
+  .stApp [data-testid="stMain"] [data-testid="stFormSubmitButton"] button {
+    width: 100%;
+  }
+
+  /* Category tiles become list rows with the symbol on the left. */
+  .stApp :is([class*="st-key-kn_category_"], [class*="st-key-tb_category_"]) button {
+    min-height: 66px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.85rem;
+    padding: 0.6rem 0.9rem;
+  }
+  .stApp :is([class*="st-key-kn_category_"], [class*="st-key-tb_category_"]) button[data-mb-glyph]::before {
+    min-width: 40px;
+    height: 40px;
+  }
+
+  .stApp :is(.st-key-sudoku_grid, .st-key-magic_grid) {
+    padding: 0.45rem;
+    border-radius: 18px;
+  }
+  .stApp .st-key-hunt_numbers {
+    padding: 0.45rem;
+  }
+  .stApp .st-key-hunt_numbers button p {
+    font-size: 1.3rem;
+  }
+
+  [data-testid="stMain"] [data-testid="stTable"] :is(th, td) {
+    padding: 0.6rem 0.55rem !important;
+    font-size: 0.9rem;
+  }
+
+  .stApp:has(.st-key-signin_submit) [data-testid="stMainBlockContainer"] {
+    padding-top: 2.5rem !important;
+  }
+  .stApp:has(.st-key-signin_submit) [data-testid="stMain"] h1 {
+    font-size: 2.2rem;
+  }
+}
+
+/* ---------- 18. Calm mode for people who prefer less motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .stApp *,
+  .stApp *::before,
+  .stApp *::after,
+  .mb-decor span {
+    animation: none !important;
+    transition: none !important;
+  }
+}

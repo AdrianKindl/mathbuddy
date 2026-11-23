@@ -14,6 +14,7 @@ import streamlit as st
 import accounts_db
 import activity_db
 import db
+import design
 import magicsquare
 import numberchain
 import numberhunt
@@ -1217,7 +1218,8 @@ def use_online_database() -> None:
 
 
 def main() -> None:
-    st.set_page_config(page_title="Mathbuddy")
+    st.set_page_config(page_title="Mathbuddy", page_icon="🧮", initial_sidebar_state="collapsed")
+    design.apply()
     if "phase" not in state:  # once per session, so reruns during a test stay fast
         use_online_database()
         db.init_db()
