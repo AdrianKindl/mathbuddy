@@ -1236,3 +1236,32 @@ def test_an_open_game_stays_open_when_coming_back_to_games():
     go_to(at, "Games")
     assert "magic" in at.session_state
     assert not game_tiles(at)
+
+
+
+# --- Games: typing into a cell, then leaving it with a button (bug found by Floria in #24) ---
+
+
+def type_without_enter(at):
+    """Type into an empty cell but do not press Enter: no rerun yet."""
+    row, col, right = first_empty_cell(at)
+    at.text_input(key=f"cell_{row}_{col}").input(str(right))
+    return row, col
+
+
+def test_typing_into_a_cell_then_new_game_does_not_crash():
+    at = start_game()
+    type_without_enter(at)
+    at.button(key="new_game").click().run()
+    assert not at.exception
+    assert metrics(at)["Lives"] == "3"
+    assert len(cell_keys(at)) == EMPTY_CELLS["Easy"]
+
+
+def test_typing_into_a_cell_then_all_games_does_not_crash():
+    at = start_game()
+    type_without_enter(at)
+    at.button(key="games_back").click().run()
+    assert not at.exception
+    assert "game" not in at.session_state
+    assert game_tiles(at) == ALL_GAMES

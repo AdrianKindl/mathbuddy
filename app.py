@@ -422,7 +422,11 @@ def on_new_game() -> None:
 
 def on_cell(row: int, col: int) -> None:
     key = cell_key(row, col)
-    raw = state[key]
+    raw = state.get(key)
+    # A button in the same rerun ("New game", "← All games") may already have
+    # ended the game and removed its cells: then there is nothing to evaluate.
+    if raw is None or "game" not in state:
+        return
     game, outcome = sudoku.enter_number(state.game, row, col, raw, utc_now())
     state.game = game
     state[key] = ""  # a wrong or invalid entry leaves the field empty again

@@ -20,6 +20,12 @@ Games section should feel the same.
 - Only `app.py`, `design.css` and the tests change. Rules, the database and
   saving finished games (spec 012) stay the same.
 
+## Bug fix found in review (Floria, #24)
+Typing a digit into a Sudoku cell without pressing Enter and then clicking
+"New game" or "← All games" crashed with a `KeyError`: the button's callback
+ended the game and removed the cells before the cell's own callback ran. The
+cell callback now does nothing when its cell or the game is already gone. Two
+new tests cover both buttons. (The "New game" case already existed on `main`.)
 ## Changes to reviewed tests (needs the team's OK)
 The old "Game" dropdown is gone, so the Games tests in `tests/test_app.py` open
 a game by its tile instead:
