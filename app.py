@@ -508,14 +508,16 @@ def render_select() -> None:
     example_box(EXAMPLE_PROMPT, example.text)
     st.button("Start", key="start", type="primary", on_click=on_start)
 
-    render_highscores()
+    # Spec 015: only the best score for the selection here; the full table is on the Profile.
+    best = highscores(own_runs()).get((operation, level))
+    st.metric("Your best", NO_VALUE if best is None else str(best))
     # Only the Tests tab has a leaderboard, and only here are the selected
-    # operation and level known (spec 014). The Profile shows the highscores alone.
+    # operation and level known (spec 014).
     render_leaderboard(operation, level)
 
 
 def render_highscores() -> None:
-    """The signed in player's highscores (MB R6), on the Tests tab and the Profile."""
+    """The signed in player's full highscore table (MB R6), on the Profile (spec 015)."""
     st.subheader("Highscores", anchor=False)
     best = highscores(own_runs())
     st.table(

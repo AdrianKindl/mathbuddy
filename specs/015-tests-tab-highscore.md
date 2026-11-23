@@ -41,7 +41,8 @@ What each test checks stays the same:
 - `tests/test_app_accounts.py`: `multiplication_easy_highscore` selects
   Multiplication and Easy and reads "Your best".
 - `tests/test_app_leaderboard.py`: the leaderboard is now the first and only
-  table on the Tests tab; "own runs only" reads "Your best".
+  table on the Tests tab; "own runs only" reads "Your best"; the leaderboard
+  is checked to follow "Your best" instead of the heading "Highscores".
 - `tests/test_app_regression.py`: the Tests tab shows "Your best" and the
   leaderboard (one table), not the heading "Highscores".
 - `tests/test_app_profile.py`: the Profile table and the Tests tab's

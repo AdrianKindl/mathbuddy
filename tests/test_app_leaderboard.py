@@ -61,6 +61,23 @@ def open_tests(operation="Multiplication", level="Easy"):
     return at
 
 
+
+def screen_order(at):
+    """Subheadings and metric labels in the order they are shown on the screen."""
+    shown = []
+
+    def walk(node):
+        kind = getattr(node, "type", None)
+        if kind == "subheader":
+            shown.append(node.value)
+        elif kind == "metric":
+            shown.append(node.label)
+        for child in getattr(node, "children", {}).values():
+            walk(child)
+
+    walk(at.main)
+    return shown
+
 def board(at):
     """The leaderboard table as rows of text: the only table on the Tests screen (spec 015)."""
     table = at.table[0].value
@@ -80,8 +97,8 @@ def test_leaderboard_follows_the_highscores_and_the_selection():
     add_user("u1", "Adrian")
     add_run("r1", 12, "u1")
     at = open_tests("Multiplication", "Easy")
-    subheaders = [s.value for s in at.subheader]
-    assert subheaders.index("Leaderboard") > subheaders.index("Highscores")
+    shown = screen_order(at)
+    assert shown.index("Leaderboard") > shown.index("Your best")  # spec 015: no "Highscores" here
     assert "All-time top 15 · Multiplication · Easy" in [c.value for c in at.caption]
     assert board(at) == [["1", "Adrian", "12"]]
 
