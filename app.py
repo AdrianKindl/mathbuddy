@@ -623,19 +623,22 @@ def render_countdown() -> None:
 
 
 @st.fragment(run_every="1s")
-def render_timer() -> None:
-    """Only this part refreshes every second, so typing is not disturbed."""
+def render_running() -> None:
+    """The whole running test: timer, task card, answer field (spec 016).
+
+    It is one fragment that refreshes itself every second. An answer, Skip and
+    the timer's refresh all rerun this same fragment, one after the other.
+    Before, the timer was a fragment of its own: when its refresh arrived while
+    the page was being redrawn after an answer, the browser dropped the task
+    card until the next answer. An answer also no longer redraws the whole app.
+    """
     run = state.get("run")
-    if run is None:
-        return
+    if state.get("phase") != "running" or run is None:
+        st.rerun(scope="app")  # the test ended (time up, Abort): show the next screen
     now = utc_now()
     if is_time_up(run, now):
-        st.rerun(scope="app")
+        st.rerun(scope="app")  # render_tests() completes and saves the run
     st.metric("Time left", math.ceil(remaining_seconds(run, now)))
-
-
-def render_running() -> None:
-    render_timer()
     st.header(state.current_task.text, anchor=False)
     answer_form("", on_submit, on_skip)
 
