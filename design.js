@@ -2,12 +2,23 @@
 // It only adds data-mb-* attributes and its own elements (confetti canvas,
 // "+1"); it never changes what Streamlit shows, so the app works without it.
 (() => {
-  const VERSION = "777-1";
+  const VERSION = "777-2";
   if (window.__mathbuddyDesign === VERSION) return;
   window.__mathbuddyDesign = VERSION;
 
   const doc = document;
   const root = doc.documentElement;
+
+  // On Streamlit Cloud the app runs inside a frame, and the page around it puts
+  // two round buttons in the bottom right corner. The CSS lifts the phone tab
+  // bar above them.
+  let embedded = true;
+  try {
+    embedded = window.self !== window.top;
+  } catch (error) {
+    embedded = true;
+  }
+  if (embedded) root.dataset.mbEmbedded = "true";
   const calm = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   // Streamlit reuses page elements for new content, so every mark is checked
