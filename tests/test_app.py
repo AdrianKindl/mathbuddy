@@ -474,9 +474,21 @@ GAMES = ["Mini Sudoku", "Sudoku", "Number Hunt", "Magic Square"]
 EMPTY_CELLS = {"Easy": 12, "Medium": 16, "Hard": 20, "Pro": 24}
 
 
+def open_game(at, choice):
+    """Open a game from its tile on the Games overview (spec 002i)."""
+    at.button(key="game_tile_" + choice.lower().replace(" ", "_")).click().run()
+    assert not at.exception
+
+
+def game_tiles(at):
+    """The game tiles on the Games overview, in order (spec 002i)."""
+    return [button.label for button in at.button if (button.key or "").startswith("game_tile_")]
+
+
 def start_game(level="Easy"):
     at = open_app()
     go_to(at, "Games")
+    open_game(at, "Mini Sudoku")
     at.selectbox(key="game_level").set_value(level)
     at.button(key="new_game").click().run()
     assert not at.exception
@@ -516,6 +528,7 @@ def test_games_section_lists_all_four_games():
 def test_games_section_offers_the_four_levels():
     at = open_app()
     go_to(at, "Games")
+    open_game(at, "Mini Sudoku")
     assert list(at.selectbox(key="game_level").options) == LEVELS
 
 
@@ -586,8 +599,7 @@ SUDOKU_EMPTY_CELLS = {"Easy": 36, "Medium": 42, "Hard": 48, "Pro": 52}
 def start_sudoku(level="Easy"):
     at = open_app()
     go_to(at, "Games")
-    at.selectbox(key="game_choice").set_value("Sudoku").run()
-    assert not at.exception
+    open_game(at, "Sudoku")
     at.selectbox(key="game_level").set_value(level)
     at.button(key="new_game").click().run()
     assert not at.exception
@@ -597,8 +609,7 @@ def start_sudoku(level="Easy"):
 def test_games_picker_offers_both_sudokus():
     at = open_app()
     go_to(at, "Games")
-    assert list(at.selectbox(key="game_choice").options)[:2] == ["Mini Sudoku", "Sudoku"]
-    assert at.selectbox(key="game_choice").value == "Mini Sudoku"
+    assert game_tiles(at)[:2] == ["Mini Sudoku", "Sudoku"]
 
 
 @pytest.mark.parametrize("level", LEVELS)
@@ -640,8 +651,8 @@ def test_sudoku_three_wrong_entries_show_game_over():
 
 def test_changing_the_game_ends_the_current_one():
     at = start_sudoku()
-    at.selectbox(key="game_choice").set_value("Mini Sudoku").run()
-    assert not at.exception
+    at.button(key="games_back").click().run()
+    open_game(at, "Mini Sudoku")
     assert "game" not in at.session_state
     assert not cell_keys(at)
 
@@ -652,8 +663,7 @@ def test_changing_the_game_ends_the_current_one():
 def start_hunt(level="Easy"):
     at = open_app()
     go_to(at, "Games")
-    at.selectbox(key="game_choice").set_value("Number Hunt").run()
-    assert not at.exception
+    open_game(at, "Number Hunt")
     at.selectbox(key="game_level").set_value(level)
     at.button(key="new_game").click().run()
     assert not at.exception
@@ -689,7 +699,7 @@ def invalid_hunt_step(at):
 def test_games_picker_offers_number_hunt():
     at = open_app()
     go_to(at, "Games")
-    assert "Number Hunt" in at.selectbox(key="game_choice").options
+    assert "Number Hunt" in game_tiles(at)
 
 
 @pytest.mark.parametrize("level, count", [("Easy", 3), ("Medium", 4), ("Hard", 5), ("Pro", 6)])
@@ -745,8 +755,8 @@ def test_three_invalid_hunt_steps_show_game_over():
 
 def test_changing_the_game_ends_the_hunt():
     at = start_hunt()
-    at.selectbox(key="game_choice").set_value("Sudoku").run()
-    assert not at.exception
+    at.button(key="games_back").click().run()
+    open_game(at, "Sudoku")
     assert "hunt" not in at.session_state
 
 
@@ -758,8 +768,7 @@ MAGIC_EMPTY_CELLS = {"Easy": 4, "Medium": 6, "Hard": 7, "Pro": 10}
 def start_magic(level="Easy"):
     at = open_app()
     go_to(at, "Games")
-    at.selectbox(key="game_choice").set_value("Magic Square").run()
-    assert not at.exception
+    open_game(at, "Magic Square")
     at.selectbox(key="game_level").set_value(level)
     at.button(key="new_game").click().run()
     assert not at.exception
@@ -796,7 +805,7 @@ def wrong_magic_number(at, right):
 def test_games_picker_offers_all_four_games():
     at = open_app()
     go_to(at, "Games")
-    options = list(at.selectbox(key="game_choice").options)
+    options = game_tiles(at)
     assert options[: len(GAMES)] == GAMES  # the four R4 games, in the brief's order
 
 
@@ -866,8 +875,7 @@ def test_magic_solving_shows_you_solved_it():
 def start_chain_game(level="Easy"):
     at = open_app()
     go_to(at, "Games")
-    at.selectbox(key="game_choice").set_value("Number Chain").run()
-    assert not at.exception
+    open_game(at, "Number Chain")
     at.selectbox(key="game_level").set_value(level)
     at.button(key="new_game").click().run()
     assert not at.exception
@@ -889,7 +897,7 @@ def answer_chain(at, text):
 def test_games_picker_offers_number_chain():
     at = open_app()
     go_to(at, "Games")
-    assert "Number Chain" in at.selectbox(key="game_choice").options
+    assert "Number Chain" in game_tiles(at)
 
 
 def test_new_chain_game_shows_lives_score_and_a_start_button():
@@ -985,8 +993,7 @@ GAME_STATE_KEYS = {
 def start_any_game(choice):
     at = open_app()
     go_to(at, "Games")
-    at.selectbox(key="game_choice").set_value(choice).run()
-    assert not at.exception
+    open_game(at, choice)
     at.button(key="new_game").click().run()
     assert not at.exception
     return at
@@ -1179,3 +1186,53 @@ def test_your_best_ignores_runs_of_others_and_without_owner():
     db.save_run("theirs", "Multiplication", "Easy", FINISHED, 50, 0, 0)
     accounts_db.assign_run("theirs", "someone-else")
     assert your_best(open_app()) == NO_HIGHSCORE
+
+
+# --- Games: tile overview (spec 002i) ---
+
+ALL_GAMES = ["Mini Sudoku", "Sudoku", "Number Hunt", "Magic Square", "Number Chain"]
+
+
+def test_games_starts_with_one_tile_per_game_and_no_game_open():
+    at = open_app()
+    go_to(at, "Games")
+    assert game_tiles(at) == ALL_GAMES
+    assert not any(button.key == "new_game" for button in at.button)
+    assert not any(button.key == "games_back" for button in at.button)
+
+
+@pytest.mark.parametrize("choice", ALL_GAMES)
+def test_a_tile_opens_its_game(choice):
+    at = open_app()
+    go_to(at, "Games")
+    open_game(at, choice)
+    assert choice in [str(sub.value) for sub in at.subheader]
+    assert not game_tiles(at)
+    assert at.button(key="games_back").label == "← All games"
+    at.button(key="new_game").click().run()
+    assert not at.exception
+    assert current_game_name(at) == choice
+
+
+def current_game_name(at):
+    keys = {"hunt": "Number Hunt", "magic": "Magic Square", "chain": "Number Chain"}
+    for key, name in keys.items():
+        if key in at.session_state:
+            return name
+    return "Sudoku" if len(at.session_state["game"].grid) == 9 else "Mini Sudoku"
+
+
+def test_back_returns_to_the_tiles_and_ends_the_running_game():
+    at = start_hunt()
+    at.button(key="games_back").click().run()
+    assert not at.exception
+    assert "hunt" not in at.session_state
+    assert game_tiles(at) == ALL_GAMES
+
+
+def test_an_open_game_stays_open_when_coming_back_to_games():
+    at = start_magic()
+    go_to(at, "Tests")
+    go_to(at, "Games")
+    assert "magic" in at.session_state
+    assert not game_tiles(at)

@@ -59,6 +59,7 @@ from ui_components import (
     answer_form,
     example_box,
     pick,
+    tile_grid,
 )
 
 SECTIONS = ["Tests", "Trainer", "Knowledge", "Games", "Profile"]
@@ -376,8 +377,21 @@ def current_game():
     return None
 
 
-def on_game_change() -> None:
-    clear_game()  # a game that has not ended is not saved, so it simply ends
+def game_tile_key(choice: str) -> str:
+    """The key of a game's tile on the Games overview, e.g. game_tile_mini_sudoku."""
+    return "game_tile_" + choice.lower().replace(" ", "_")
+
+
+def on_open_game(choice: str) -> None:
+    """A tile on the Games overview opens that game (spec 002i)."""
+    clear_game()
+    state.games_open = choice
+
+
+def on_games_back() -> None:
+    """Back to the overview. A game that has not ended is not saved, so it simply ends."""
+    clear_game()
+    state.games_open = None
 
 
 def save_game_if_over() -> None:
@@ -385,13 +399,13 @@ def save_game_if_over() -> None:
     game = current_game()
     if game is None or game.status == "running" or "game_id" not in state:
         return
-    choice = state.get("game_choice", GAMES[0])
+    choice = state.get("games_open", GAMES[0])
     activity_db.save_game(state.game_id, state.user.id, choice, game.level, utc_now(), str(game.status))
 
 
 def on_new_game() -> None:
     clear_game()
-    choice = state.get("game_choice", GAMES[0])
+    choice = state.get("games_open", GAMES[0])
     if choice == "Number Hunt":
         state.hunt = numberhunt.start_game(state.game_level, random.Random())
     elif choice == "Magic Square":
@@ -1172,11 +1186,26 @@ def render_chain(game: numberchain.Game) -> None:
         )
 
 
+def render_games_overview() -> None:
+    """One coloured tile per game (spec 002i)."""
+    st.caption(f"Pick a game: {', '.join(GAMES[:-1])} or {GAMES[-1]}.")
+    with st.container(key="games_tiles"):
+        tile_grid(
+            [(choice, game_tile_key(choice), (choice,)) for choice in GAMES],
+            on_open_game,
+            per_row=2,
+        )
+
+
 def render_games() -> None:
     st.header("Games", anchor=False)
-    choice = st.selectbox("Game", GAMES, key="game_choice", on_change=on_game_change)
+    choice = state.get("games_open")
+    if choice is None:
+        render_games_overview()
+        return
+
+    st.button("← All games", key="games_back", on_click=on_games_back)
     st.subheader(choice, anchor=False)
-    st.caption(f"Games: {', '.join(GAMES)}")
     st.markdown(GAME_RULES[choice])
 
     level_column, button_column = st.columns([2, 1], vertical_alignment="bottom")
