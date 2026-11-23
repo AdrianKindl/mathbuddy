@@ -1,0 +1,61 @@
+# Mathbuddy design system (spec 777). The look of every screen comes from here
+# and from design.py / design.css. Light and dark follow the device setting.
+
+[client]
+toolbarMode = "minimal"
+
+[theme]
+font = "Plus Jakarta Sans:https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap, sans-serif"
+headingFont = "Outfit:https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&display=swap, sans-serif"
+codeFont = "JetBrains Mono:https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&display=swap, monospace"
+baseFontSize = 16
+baseRadius = "14px"
+buttonRadius = "14px"
+headingFontSizes = ["2.5rem", "2rem", "1.4rem", "1.2rem", "1.05rem", "0.95rem"]
+headingFontWeights = [800, 800, 700, 700, 600, 600]
+metricValueFontSize = "1.9rem"
+metricValueFontWeight = 800
+showWidgetBorder = true
+chartCategoricalColors = ["#6C47FF", "#FF7A59", "#12B886", "#2F80ED", "#F5A524", "#E64980", "#15AABF", "#845EF7"]
+
+[theme.light]
+primaryColor = "#6C47FF"
+backgroundColor = "#F6F4FF"
+secondaryBackgroundColor = "#EEEAFE"
+textColor = "#1A1633"
+linkColor = "#5B36F0"
+borderColor = "#E2DCF5"
+codeBackgroundColor = "#EEEAFE"
+codeTextColor = "#4C2FD6"
+dataframeHeaderBackgroundColor = "#F3F0FF"
+redColor = "#E5484D"
+orangeColor = "#F76B15"
+yellowColor = "#F5A524"
+greenColor = "#12A16B"
+blueColor = "#2F80ED"
+violetColor = "#6C47FF"
+
+[theme.light.sidebar]
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F3F0FF"
+
+[theme.dark]
+primaryColor = "#8F73FF"
+backgroundColor = "#0E0B1F"
+secondaryBackgroundColor = "#1E1A3A"
+textColor = "#F2EFFF"
+linkColor = "#B3A1FF"
+borderColor = "#2E2852"
+codeBackgroundColor = "#221D42"
+codeTextColor = "#C4B5FF"
+dataframeHeaderBackgroundColor = "#1E1A3A"
+redColor = "#FF6369"
+orangeColor = "#FF8B3E"
+yellowColor = "#FFC53D"
+greenColor = "#3DD68C"
+blueColor = "#5EA8FF"
+violetColor = "#8F73FF"
+
+[theme.dark.sidebar]
+backgroundColor = "#151230"
+secondaryBackgroundColor = "#1E1A3A"

@@ -349,12 +349,17 @@ def test_decimal_answers_are_typed_with_a_point(fast_sleep):
     choose(at, "tr_category", "Number types")
     choose(at, "tr_number_type", "Decimals")
     start(at)
+    # Some decimal tasks have a whole answer (5.4 + 8.6 = 14), with no point to
+    # turn into a comma. Answer those first, so the test does not depend on chance.
+    while "." not in right_answer(at):
+        submit(at, right_answer(at))
+    before = at.session_state["tr_session"]
     submit(at, right_answer(at).replace(".", ","))  # a comma is not evaluated
-    assert at.session_state["tr_session"].attempts == ()
+    assert at.session_state["tr_session"].attempts == before.attempts
     assert [box.value for box in at.warning] == [ANSWER_HINTS[AnswerKind.DECIMAL]]
 
     submit(at, right_answer(at))
-    assert at.session_state["tr_session"].correct == 1
+    assert at.session_state["tr_session"].correct == before.correct + 1
 
 
 def test_money_answers_are_accepted_with_the_euro_sign(fast_sleep):
