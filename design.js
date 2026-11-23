@@ -355,6 +355,56 @@
     else doc.querySelector('[data-testid="stSidebarCollapseButton"] button')?.click();
   });
 
+  // --- Easter egg (spec 020): the logo hiccups out an equation ---
+  // Browser only: nothing is sent to the server. The equations float above the
+  // page with pointer-events: none, so they never block clicks or typing.
+  const HICCUPS = [
+    "7 × 8 = 56", "12 + 9 = 21", "81 ÷ 9 = 9", "15² = 225", "6 × 7 = 42",
+    "9 × 9 = 81", "25 × 4 = 100", "144 ÷ 12 = 12", "√144 = 12", "√81 = 9",
+    "13² = 169", "100 − 37 = 63", "48 ÷ 6 = 8", "11 × 11 = 121", "250 + 750 = 1000",
+    "1000 − 1 = 999", "12 × 12 = 144", "63 ÷ 7 = 9", "17 + 25 = 42", "3 × 14 = 42",
+    "16 × 16 = 256", "99 + 1 = 100", "56 ÷ 8 = 7", "8 × 125 = 1000", "20² = 400",
+  ];
+  const HICCUP_MAX = 8;
+  const HICCUP_MS = 1500;
+  let hiccups = [];
+  let lastHiccup = -1;
+  function hiccup(brand) {
+    const logo = brand.querySelector(".mb-logo") || brand;
+    replay(logo, "data-mb-hiccup");
+    let index = Math.floor(Math.random() * HICCUPS.length);
+    if (index === lastHiccup) index = (index + 1) % HICCUPS.length;
+    lastHiccup = index;
+
+    while (hiccups.length >= HICCUP_MAX) hiccups.shift().remove();
+    const box = logo.getBoundingClientRect();
+    const start = box.top + box.height * 0.35;
+    const bubble = doc.createElement("div");
+    bubble.className = "mb-hiccup";
+    bubble.textContent = HICCUPS[index];
+    bubble.setAttribute("aria-hidden", "true");
+    bubble.style.left = `${box.left + box.width * 0.55}px`;
+    bubble.style.top = `${start}px`;
+    bubble.style.setProperty("--mb-rise", `${-Math.max(24, Math.min(60, start - 6))}px`);
+    bubble.style.setProperty("--mb-drift", `${Math.round(10 + Math.random() * 40)}px`);
+    doc.body.appendChild(bubble);
+    hiccups.push(bubble);
+    const done = () => {
+      bubble.remove();
+      hiccups = hiccups.filter((other) => other !== bubble);
+    };
+    bubble.addEventListener("animationend", done, { once: true });
+    setTimeout(done, HICCUP_MS + 200); // also when the tab hides the animation
+  }
+  // Keep the cursor where it is (e.g. in the answer field) when the logo is clicked.
+  doc.addEventListener("mousedown", (event) => {
+    if (event.target.closest && event.target.closest("[data-mb-topbar] .mb-brand")) event.preventDefault();
+  });
+  doc.addEventListener("click", (event) => {
+    const brand = event.target.closest && event.target.closest("[data-mb-topbar] .mb-brand");
+    if (brand) hiccup(brand);
+  });
+
   // --- Run everything after Streamlit changes the page ---
   function scan() {
     syncTheme();
