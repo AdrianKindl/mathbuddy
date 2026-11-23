@@ -8,6 +8,7 @@ from contextlib import closing
 from datetime import datetime, timezone
 
 import db
+from stats import Kind
 from trainer import SavedSession, Session, Status, levels_text, summarize
 
 
@@ -64,17 +65,37 @@ def save_session(session_id: str, session: Session) -> None:
         )
 
 
+COLUMNS = (
+    "t.id, t.category, t.name, t.levels, t.mode, t.limit_value, t.finished_at, "
+    "t.duration_seconds, t.correct, t.wrong, t.skipped"
+)
+
+
 def list_sessions(limit: int | None = None) -> list[SavedSession]:
-    """Finished sessions, newest first. `limit` keeps only the newest ones."""
-    query = (
-        "SELECT id, category, name, levels, mode, limit_value, finished_at, "
-        "duration_seconds, correct, wrong, skipped "
-        "FROM trainer_sessions ORDER BY finished_at DESC, id"
+    """Finished sessions of all players, newest first. `limit` keeps only the newest ones."""
+    return _read(f"SELECT {COLUMNS} FROM trainer_sessions t", (), limit)
+
+
+def list_sessions_for(user_id: str, limit: int | None = None) -> list[SavedSession]:
+    """Finished sessions of one player, newest first (spec 014).
+
+    The owner is in `activity_owners` (spec 012); sessions without an owner
+    belong to nobody.
+    """
+    return _read(
+        f"SELECT {COLUMNS} FROM trainer_sessions t "
+        "JOIN activity_owners o ON o.activity_id = t.id AND o.kind = ? "
+        "WHERE o.user_id = ?",
+        (Kind.TRAINER.value, user_id),
+        limit,
     )
-    parameters: tuple[int, ...] = ()
+
+
+def _read(query: str, parameters: tuple, limit: int | None) -> list[SavedSession]:
+    query += " ORDER BY t.finished_at DESC, t.id"
     if limit is not None:
         query += " LIMIT ?"
-        parameters = (limit,)
+        parameters = (*parameters, limit)
 
     with closing(db.connect()) as connection:
         rows = connection.execute(query, parameters).fetchall()

@@ -308,7 +308,7 @@ def _render_example(topics: list[Topic]) -> None:
 
 def _render_history() -> None:
     st.subheader("Recent sessions", anchor=False)
-    sessions = trainer_db.list_sessions(limit=HISTORY_LENGTH)
+    sessions = trainer_db.list_sessions_for(state.user.id, limit=HISTORY_LENGTH)  # spec 014
     if not sessions:
         st.caption("No finished sessions yet. Sessions you end early are not saved.")
         return
