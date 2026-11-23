@@ -396,14 +396,40 @@
     bubble.addEventListener("animationend", done, { once: true });
     setTimeout(done, HICCUP_MS + 200); // also when the tab hides the animation
   }
-  // Keep the cursor where it is (e.g. in the answer field) when the logo is clicked.
-  doc.addEventListener("mousedown", (event) => {
-    if (event.target.closest && event.target.closest("[data-mb-topbar] .mb-brand")) event.preventDefault();
-  });
-  doc.addEventListener("click", (event) => {
-    const brand = event.target.closest && event.target.closest("[data-mb-topbar] .mb-brand");
-    if (brand) hiccup(brand);
-  });
+  // One delegated listener on the app's document, bound once (spec 021). It
+  // works whenever the logo appears and however often Streamlit redraws it.
+  // Capture phase: it runs before any element on the way can stop the click.
+  const BRAND = "[data-mb-topbar] .mb-brand";
+  const INTERACTIVE = 'button, a, input, textarea, select, [role="button"], [data-testid="stSidebar"]';
+  function brandFor(event) {
+    const path = event.composedPath ? event.composedPath() : [];
+    for (const node of path) {
+      if (node.nodeType === 1 && node.matches(BRAND)) return node;
+    }
+    const target = event.target;
+    const hit = target && target.closest && target.closest(BRAND);
+    if (hit) return hit;
+    // Something see-through lies on top of the logo: decide by position,
+    // unless the click is meant for a button, field or the account panel.
+    if (target && target.closest && target.closest(INTERACTIVE)) return null;
+    for (const brand of doc.querySelectorAll(BRAND)) {
+      const box = brand.getBoundingClientRect();
+      if (event.clientX >= box.left && event.clientX <= box.right &&
+          event.clientY >= box.top && event.clientY <= box.bottom) return brand;
+    }
+    return null;
+  }
+  if (!doc.__mbHiccupBound) {
+    doc.__mbHiccupBound = true;
+    // Keep the cursor where it is (e.g. in the answer field) when the logo is clicked.
+    doc.addEventListener("mousedown", (event) => {
+      if (brandFor(event)) event.preventDefault();
+    }, true);
+    doc.addEventListener("click", (event) => {
+      const brand = brandFor(event);
+      if (brand) hiccup(brand);
+    }, true);
+  }
 
   // --- Run everything after Streamlit changes the page ---
   function scan() {
