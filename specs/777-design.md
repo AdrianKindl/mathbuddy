@@ -2,33 +2,45 @@
 
 ## Why
 Mathbuddy should feel like a real app that people enjoy opening every day: clear
-on a phone held in one hand, roomy on a laptop, and lively when you play. Until
-now every screen used the plain Streamlit look. The look must not copy Numbio.
+on a phone held in one hand, roomy on a laptop, and as simple to use as the best
+maths trainers. The first version looked playful and a bit dreamy (glows,
+gradients, floating symbols). The look is now modern and clean: calm surfaces,
+one accent colour, and one clear main action per screen. It must not copy Numbio.
 
 ## What
-- **Theme** in `.streamlit/config.toml`: violet brand colour, warm accent,
-  rounded corners, the fonts Plus Jakarta Sans (text), Outfit (headings,
-  numbers) and JetBrains Mono (code). A light and a dark version; the app
-  follows the setting of the phone or laptop.
+- **Theme** in `.streamlit/config.toml`: neutral warm greys, one copper accent
+  (`#B4532A`, lighter in dark mode), green / red only for right / wrong. One
+  font, Inter, for text, headings and numbers; JetBrains Mono for code. A
+  light and a dark version; the app follows the setting of the phone or laptop.
 - **Design layer** in `design.py`, `design.css` and `design.js`. `app.py` only
   calls `design.apply()` right after `st.set_page_config`. Nothing in the layer
   changes what a screen shows or does: same texts, keys, widgets and rules.
+- **Clean, flat look**: white cards with a thin border instead of shadows, flat
+  buttons (solid copper for the main action, white with a thin border for the
+  rest), smaller corner radii, short fades instead of bouncing animations. No
+  background glows, no gradients, no floating maths symbols.
 - **Top bar**: logo and "Mathbuddy" on the left, the signed-in player
   (greeting, name, avatar with the first letter) on the right. Tapping the
   player opens the account panel (the sidebar starts closed).
-- **Navigation**: a glass bar with one icon per section on the laptop; on a
-  phone (640 px wide or less) a tab bar fixed at the bottom, like a native app.
-- **Every screen styled**: pills and segmented controls, input fields, cards,
-  metrics (the main result as a coloured hero card), tables, charts, alerts,
-  tabs, the account panel, the sign-in screen with floating maths symbols.
+- **Navigation**: on the laptop a simple tab switch with one icon per section;
+  on a phone (640 px wide or less) a flat tab bar fixed at the bottom, like a
+  native app, the current tab marked by a short copper line and copper icon.
+  On Streamlit Cloud the tab bar floats above Cloud's own buttons.
+- **One clear main action**: Start, Start training and Back to Tests are one
+  big full-width button. On a phone the Start buttons of Tests and Trainer stay
+  in reach above the tab bar while you scroll through the choices.
 - **Tests and Trainer**: the task as a big card, a round 3-2-1 countdown, the
-  time left as a ring that turns red in the last 10 seconds, a "+1" and a small
-  burst of confetti for a right answer, a shake for a wrong one, a big confetti
-  burst for a new highscore.
+  time left as a ring that turns red in the last 10 seconds, a small "+1" for a
+  right answer, a shake for a wrong one. While training, task, time, right and
+  wrong sit in one slim strip above the task.
+- **Result screens** (Tests, Trainer, Knowledge and Textbook practice): one card
+  with a ring that fills up to the share of right answers, a short verdict
+  ("Excellent!", "Great job!", "Good!", "Keep practising!") and the numbers in a
+  compact strip. Only a real win (new highscore, solved, found) gets confetti.
 - **Knowledge and Textbook**: category tiles with a symbol, list rows with a
   chevron, "Previous / Next" stays one row on the phone.
 - **Games**: Sudoku, Mini Sudoku, Number Hunt, Magic Square and Number Chain
-  boards drawn as cards with big tiles; hearts inside the Lives card; the
+  boards drawn as flat cards with big tiles; hearts inside the Lives card; the
   selected tile stays blue ("blue cell" in the game texts).
 - **Phone details**: main buttons full width and at least 52 px high, two
   buttons side by side stay side by side, long button labels wrap instead of
@@ -44,15 +56,17 @@ now every screen used the plain Streamlit look. The look must not copy Numbio.
 
 ## Out of scope
 New features, new texts, changes to rules, the database or the tests of other
-specs. A theme switch inside the app (the device setting decides).
+specs. Changes to the order or number of screens (proposals are listed in the
+PR). A theme switch inside the app (the device setting decides).
 
 ## Done when
 - `uv run pytest` passes, including `tests/test_design.py`: theme with light
-  and dark version, no secrets in the theme file, a style sheet Streamlit does
-  not remove, no nested `:has()`, phone + dark + reduced-motion rules, one nav
-  icon per section, a script that loads nothing from other sites, the avatar
-  letter, the player name shown as text only, the design on the sign-in screen
-  and in the app, no extra text on any screen.
+  and dark version and the Inter font, no secrets in the theme file, a style
+  sheet Streamlit does not remove, no nested `:has()`, phone + dark +
+  reduced-motion rules, one nav icon per section, a script that loads nothing
+  from other sites, the avatar letter, the player name shown as text only, the
+  design on the sign-in screen (without decoration) and in the app, no extra
+  text on any screen.
 - Manual check in the PR (laptop and a browser at 375 px, light and dark):
   sign-in, Tests (select, countdown, running, result, highscore), Trainer
   (setup, running, result), Knowledge and Textbook (tiles, list, article,

@@ -1,61 +1,62 @@
 # Mathbuddy design system (spec 777). The look of every screen comes from here
 # and from design.py / design.css. Light and dark follow the device setting.
+# Modern and clean: neutral greys, one copper accent, one font (Inter).
 
 [client]
 toolbarMode = "minimal"
 
 [theme]
-font = "Plus Jakarta Sans:https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap, sans-serif"
-headingFont = "Outfit:https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&display=swap, sans-serif"
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap, sans-serif"
+headingFont = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap, sans-serif"
 codeFont = "JetBrains Mono:https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&display=swap, monospace"
 baseFontSize = 16
-baseRadius = "14px"
-buttonRadius = "14px"
-headingFontSizes = ["2.5rem", "2rem", "1.4rem", "1.2rem", "1.05rem", "0.95rem"]
-headingFontWeights = [800, 800, 700, 700, 600, 600]
-metricValueFontSize = "1.9rem"
-metricValueFontWeight = 800
+baseRadius = "12px"
+buttonRadius = "12px"
+headingFontSizes = ["2.1rem", "1.7rem", "1.25rem", "1.1rem", "1rem", "0.92rem"]
+headingFontWeights = [700, 700, 700, 600, 600, 600]
+metricValueFontSize = "1.75rem"
+metricValueFontWeight = 700
 showWidgetBorder = true
-chartCategoricalColors = ["#6C47FF", "#FF7A59", "#12B886", "#2F80ED", "#F5A524", "#E64980", "#15AABF", "#845EF7"]
+chartCategoricalColors = ["#B4532A", "#78716C", "#2563EB", "#16A34A", "#D97706", "#A8A29E", "#0891B2", "#DC2626"]
 
 [theme.light]
-primaryColor = "#6C47FF"
-backgroundColor = "#F6F4FF"
-secondaryBackgroundColor = "#EEEAFE"
-textColor = "#1A1633"
-linkColor = "#5B36F0"
-borderColor = "#E2DCF5"
-codeBackgroundColor = "#EEEAFE"
-codeTextColor = "#4C2FD6"
-dataframeHeaderBackgroundColor = "#F3F0FF"
-redColor = "#E5484D"
-orangeColor = "#F76B15"
-yellowColor = "#F5A524"
-greenColor = "#12A16B"
-blueColor = "#2F80ED"
-violetColor = "#6C47FF"
+primaryColor = "#B4532A"
+backgroundColor = "#FAFAF9"
+secondaryBackgroundColor = "#F5F5F4"
+textColor = "#1C1917"
+linkColor = "#963F1C"
+borderColor = "#E7E5E4"
+codeBackgroundColor = "#F5F5F4"
+codeTextColor = "#963F1C"
+dataframeHeaderBackgroundColor = "#F5F5F4"
+redColor = "#DC2626"
+orangeColor = "#EA580C"
+yellowColor = "#D97706"
+greenColor = "#16A34A"
+blueColor = "#2563EB"
+violetColor = "#7C3AED"
 
 [theme.light.sidebar]
 backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F3F0FF"
+secondaryBackgroundColor = "#F5F5F4"
 
 [theme.dark]
-primaryColor = "#8F73FF"
-backgroundColor = "#0E0B1F"
-secondaryBackgroundColor = "#1E1A3A"
-textColor = "#F2EFFF"
-linkColor = "#B3A1FF"
-borderColor = "#2E2852"
-codeBackgroundColor = "#221D42"
-codeTextColor = "#C4B5FF"
-dataframeHeaderBackgroundColor = "#1E1A3A"
-redColor = "#FF6369"
-orangeColor = "#FF8B3E"
-yellowColor = "#FFC53D"
-greenColor = "#3DD68C"
-blueColor = "#5EA8FF"
-violetColor = "#8F73FF"
+primaryColor = "#E0814F"
+backgroundColor = "#0C0A09"
+secondaryBackgroundColor = "#211D1B"
+textColor = "#FAFAF9"
+linkColor = "#F0A57A"
+borderColor = "#2E2926"
+codeBackgroundColor = "#211D1B"
+codeTextColor = "#F0A57A"
+dataframeHeaderBackgroundColor = "#211D1B"
+redColor = "#F87171"
+orangeColor = "#FB923C"
+yellowColor = "#FBBF24"
+greenColor = "#4ADE80"
+blueColor = "#3B82F6"
+violetColor = "#A78BFA"
 
 [theme.dark.sidebar]
-backgroundColor = "#151230"
-secondaryBackgroundColor = "#1E1A3A"
+backgroundColor = "#171412"
+secondaryBackgroundColor = "#211D1B"

@@ -35,8 +35,8 @@ def html_bodies(at: AppTest) -> list[str]:
 
 def test_theme_has_a_light_and_a_dark_version_with_the_same_fonts():
     theme = tomllib.loads(CONFIG.read_text(encoding="utf-8"))["theme"]
-    assert theme["font"].startswith("Plus Jakarta Sans:https://fonts.googleapis.com/")
-    assert theme["headingFont"].startswith("Outfit:https://fonts.googleapis.com/")
+    assert theme["font"].startswith("Inter:https://fonts.googleapis.com/")
+    assert theme["headingFont"].startswith("Inter:https://fonts.googleapis.com/")
     for mode in ("light", "dark"):
         for option in ("primaryColor", "backgroundColor", "secondaryBackgroundColor", "textColor"):
             assert re.fullmatch(r"#[0-9A-Fa-f]{6}", theme[mode][option]), (mode, option)
@@ -125,13 +125,13 @@ def test_signed_in_app_has_the_design_and_the_player_in_the_top_bar():
 
 
 @pytest.mark.signed_out
-def test_sign_in_screen_has_the_design_but_no_top_bar():
+def test_sign_in_screen_has_the_design_but_no_top_bar_and_no_decoration():
     at = AppTest.from_file(str(APP)).run()
     assert not at.exception
     bodies = html_bodies(at)
     assert any("Mathbuddy design system" in body for body in bodies)
     assert not any('class="mb-topbar"' in body for body in bodies)
-    assert any('class="mb-decor"' in body for body in bodies)
+    assert not any('class="mb-decor"' in body for body in bodies)  # clean look: nothing floats behind the card
     assert at.title[0].value == "Mathbuddy"
 
 

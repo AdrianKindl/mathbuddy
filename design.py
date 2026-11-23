@@ -3,7 +3,7 @@
 Streamlit only: no rules and no SQL. app.py calls `apply()` first in every
 run. The colours and fonts come from `.streamlit/config.toml`, `design.css`
 styles the elements Streamlit draws, and `design.js` adds the small moments
-(confetti, the timer ring, the pop of a new task).
+(the timer ring, the result ring, confetti for a new highscore).
 
 A new screen, like Profile, gets the same look by itself as long as it uses
 normal Streamlit elements: st.header, st.caption, st.metric in st.columns,
@@ -21,10 +21,6 @@ from runs import TIME_LIMIT_SECONDS
 HERE = Path(__file__).resolve().parent
 CSS_FILE = HERE / "design.css"
 JS_FILE = HERE / "design.js"
-
-# Floating maths symbols behind the sign-in card. Decoration only.
-DECOR_SYMBOLS = ("+", "×", "÷", "−", "√", "%", "=", "π", "²", "∑", "½", "∞")
-
 
 def stylesheet() -> str:
     return CSS_FILE.read_text(encoding="utf-8")
@@ -63,14 +59,9 @@ def top_bar(username: str) -> str:
 </div>"""
 
 
-def decor() -> str:
-    spans = "".join(f"<span>{symbol}</span>" for symbol in DECOR_SYMBOLS)
-    return f'<div class="mb-decor" aria-hidden="true">{spans}</div>'
-
-
 def apply() -> None:
     """Draw the design layer. Call it once per run, right after st.set_page_config."""
     st.html(f"<style>{stylesheet()}</style>")
     user = st.session_state.get("user")
-    chrome = top_bar(user.username) if user is not None else decor()
+    chrome = top_bar(user.username) if user is not None else ""
     st.html(f"{chrome}<script>{script()}</script>", unsafe_allow_javascript=True)

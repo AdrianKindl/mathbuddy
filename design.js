@@ -2,7 +2,7 @@
 // It only adds data-mb-* attributes and its own elements (confetti canvas,
 // "+1"); it never changes what Streamlit shows, so the app works without it.
 (() => {
-  const VERSION = "777-2";
+  const VERSION = "777-3";
   if (window.__mathbuddyDesign === VERSION) return;
   window.__mathbuddyDesign = VERSION;
 
@@ -144,6 +144,53 @@
     });
   }
 
+  // --- Result screens: a score ring and a short verdict above the numbers ---
+  // Tests, Trainer and Tricks/Textbook practice end with a row of metrics. The
+  // row gets the share of right answers (from "Accuracy" or "Correct: 7 / 10"),
+  // and the CSS draws the ring and the verdict above it. Nothing else changes.
+  const VERDICTS = [
+    [90, "Excellent!", "top"],
+    [75, "Great job!", "good"],
+    [50, "Good!", "ok"],
+    [0, "Keep practising!", "low"],
+  ];
+  const RESULT_SCREEN = '.st-key-back, [class*="st-key-"][class*="again"]';
+  function shareOf(row) {
+    let share = null;
+    row.querySelectorAll(':scope > [data-testid="stColumn"] [data-testid="stMetric"]').forEach((metric) => {
+      const label = metric.querySelector('[data-testid="stMetricLabel"]')?.textContent.trim();
+      const value = (metric.querySelector('[data-testid="stMetricValue"]')?.textContent || "").trim();
+      if (label === "Accuracy") {
+        const number = parseFloat(value);
+        if (!Number.isNaN(number)) share = number;
+      } else if (label === "Correct") {
+        const parts = value.match(/^(\d+)\s*\/\s*(\d+)$/);
+        if (parts && Number(parts[2]) > 0) share = (100 * Number(parts[1])) / Number(parts[2]);
+      }
+    });
+    return share;
+  }
+  function tagResult() {
+    const onResult = !!doc.querySelector(`[data-testid="stMain"] :is(${RESULT_SCREEN})`);
+    doc.querySelectorAll('[data-testid="stMain"] [data-testid="stHorizontalBlock"]').forEach((row) => {
+      const share = onResult ? shareOf(row) : null;
+      if (share === null) {
+        if ("mbResult" in row.dataset) {
+          ["mbResult", "mbPct", "mbVerdict", "mbTone"].forEach((name) => delete row.dataset[name]);
+          row.style.removeProperty("--mb-score");
+        }
+        return;
+      }
+      const percent = Math.round(Math.max(0, Math.min(100, share)));
+      const [, verdict, tone] = VERDICTS.find(([least]) => percent >= least);
+      row.dataset.mbResult = "";
+      row.dataset.mbPct = `${percent}%`;
+      row.dataset.mbVerdict = verdict;
+      row.dataset.mbTone = tone;
+      row.style.setProperty("--mb-score", String(percent));
+    });
+  }
+
   // --- A new task pops in ---
   const HERO =
     '[data-testid="stElementContainer"]:has(> [data-testid="stHeading"]):has(+ [data-testid="stLayoutWrapper"] > [data-testid="stForm"]) > [data-testid="stHeading"],' +
@@ -183,7 +230,7 @@
   }
 
   // --- Confetti ---
-  const COLORS = ["#6c47ff", "#a04bff", "#ff7a59", "#ffc53d", "#12b886", "#2f80ed", "#ff6b8b"];
+  const COLORS = ["#b4532a", "#e0814f", "#f0a57a", "#1c1917", "#a8a29e", "#16a34a"];
   let canvas = null;
   let context = null;
   let pieces = [];
@@ -266,12 +313,8 @@
     }
   }
   function celebrate() {
-    launch({ x: innerWidth * 0.12, y: innerHeight + 10, angle: -62, spread: 22, count: 90, power: 1.25 });
-    launch({ x: innerWidth * 0.88, y: innerHeight + 10, angle: -118, spread: 22, count: 90, power: 1.25 });
-    setTimeout(() => launch({ x: innerWidth / 2, y: innerHeight * 0.3, angle: -90, spread: 100, count: 70, power: 0.8 }), 260);
-  }
-  function cheer() {
-    launch({ x: innerWidth / 2, y: innerHeight * 0.32, angle: -90, spread: 70, count: 70, power: 0.85 });
+    launch({ x: innerWidth * 0.15, y: innerHeight + 10, angle: -64, spread: 20, count: 55, power: 1.15 });
+    launch({ x: innerWidth * 0.85, y: innerHeight + 10, angle: -116, spread: 20, count: 55, power: 1.15 });
   }
 
   // Celebrate once when a win or a result appears, not on every rerun.
@@ -289,8 +332,8 @@
     });
     if (ready) {
       const fresh = [...now].filter((text) => !shown.has(text));
+      // Clean look: only a real win (new highscore, solved, found) gets confetti.
       if (fresh.some((text) => BIG.test(text))) celebrate();
-      else if (fresh.length) cheer();
     }
     shown = now;
     ready = true;
@@ -310,7 +353,6 @@
     plus.style.top = `${box.top - 6}px`;
     doc.body.appendChild(plus);
     setTimeout(() => plus.remove(), 950);
-    launch({ x: box.left + box.width / 2, y: box.top + 8, angle: -90, spread: 55, count: 16, power: 0.55 });
   }
   function onStyle(style) {
     if (seenStyles.has(style)) return;
@@ -362,6 +404,7 @@
     tagCards();
     tagEmptyCells();
     tagTimer();
+    tagResult();
     popChanged();
     celebrations();
     greet();
