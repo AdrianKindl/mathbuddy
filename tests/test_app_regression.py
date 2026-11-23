@@ -46,11 +46,11 @@ def test_tests_tab_renders_highscores_and_the_leaderboard_for_the_selection(oper
     at.run()
 
     assert not at.exception
-    assert "Highscores" in subheaders(at)
+    assert "Your best" in [metric.label for metric in at.metric]  # spec 015: no table here
     assert "Leaderboard" in subheaders(at)
     assert f"All-time top 15 · {operation} · {level}" in [c.value for c in at.caption]
-    assert len(at.table) == 2  # the highscores and the leaderboard
-    assert list(at.table[1].value.iloc[0]) == ["1", "Adrian", "7"]
+    assert len(at.table) == 1  # the leaderboard
+    assert list(at.table[0].value.iloc[0]) == ["1", "Adrian", "7"]
 
 
 def test_profile_shows_its_highscores_without_the_leaderboard():

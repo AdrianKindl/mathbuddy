@@ -89,7 +89,17 @@ def metrics(at):
 
 
 def highscore_table(at):
+    """The full highscore table: on the Profile since spec 015."""
     return at.table[0].value
+
+
+def your_best(at, test_type="Multiplication", level="Easy"):
+    """The Tests tab's best score for one test type and level (spec 015)."""
+    at.button_group(key="test_type").set_value(test_type)
+    at.button_group(key="level").set_value(level)
+    at.run()
+    assert not at.exception
+    return metrics(at)["Your best"]
 
 
 def seed_run(run_id, level, correct):
@@ -140,7 +150,9 @@ def test_pickers_offer_five_test_types_and_four_levels():
 
 
 def test_highscore_table_has_all_20_cells_and_shows_a_dash_when_empty():
-    table = highscore_table(open_app())
+    at = open_app()
+    go_to(at, "Profile")  # the full table is on the Profile since spec 015
+    table = highscore_table(at)
     assert list(table.index) == TEST_TYPES
     assert list(table.columns) == LEVELS
     assert all(table.loc[t, level] == NO_HIGHSCORE for t in TEST_TYPES for level in LEVELS)
@@ -322,7 +334,7 @@ def test_aborted_run_saves_nothing_and_returns_to_the_tests_screen(fast_sleep):
     assert not at.exception
 
     assert db.list_runs() == []
-    assert highscore_table(at).loc["Multiplication", "Easy"] == NO_HIGHSCORE
+    assert your_best(at) == NO_HIGHSCORE
 
 
 def test_leaving_the_section_during_a_run_saves_nothing(fast_sleep):
@@ -435,9 +447,8 @@ def test_medium_run_does_not_change_the_easy_highscore_on_screen(fast_sleep):
     at.button(key="back").click().run()
     assert not at.exception
 
-    table = highscore_table(at)
-    assert table.loc["Multiplication", "Easy"] == "15"
-    assert table.loc["Multiplication", "Medium"] == "30"
+    assert your_best(at, level="Easy") == "15"
+    assert your_best(at, level="Medium") == "30"
 
 
 def test_highscore_is_still_shown_after_a_restart(fast_sleep):
@@ -445,7 +456,7 @@ def test_highscore_is_still_shown_after_a_restart(fast_sleep):
     finish_run(at, correct=9)
 
     reopened = open_app()  # a new session on the same database file
-    assert highscore_table(reopened).loc["Multiplication", "Easy"] == "9"
+    assert your_best(reopened) == "9"
 
 
 # --- Structure (AGENTS.md) ---
@@ -1137,3 +1148,34 @@ def test_running_and_solved_games_have_no_try_again_button():
         enter(at, row, col, str(right))
     assert "You solved it!" in page_text(at)
     assert not has_try_again_button(at)
+
+# --- Tests tab shows only the best score for the selection (spec 015) ---
+
+
+def test_tests_tab_has_no_highscore_table_and_no_highscores_heading():
+    at = open_app()
+    assert "Highscores" not in [subheader.value for subheader in at.subheader]
+    assert not any(list(table.value.columns) == LEVELS for table in at.table)
+
+
+def test_your_best_shows_a_dash_when_nothing_was_played():
+    assert metrics(open_app())["Your best"] == NO_HIGHSCORE
+
+
+def test_your_best_follows_the_selected_test_type_and_level():
+    seed_run("e1", "Easy", 15)
+    seed_run("e2", "Easy", 9)
+    seed_run("m1", "Medium", 7)
+    at = open_app()
+    assert your_best(at, "Multiplication", "Easy") == "15"
+    assert your_best(at, "Multiplication", "Medium") == "7"
+    assert your_best(at, "Addition", "Easy") == NO_HIGHSCORE
+
+
+def test_your_best_ignores_runs_of_others_and_without_owner():
+    db.init_db()
+    db.save_run("no-owner", "Multiplication", "Easy", FINISHED, 40, 0, 0)
+    accounts_db.init_db()
+    db.save_run("theirs", "Multiplication", "Easy", FINISHED, 50, 0, 0)
+    accounts_db.assign_run("theirs", "someone-else")
+    assert your_best(open_app()) == NO_HIGHSCORE

@@ -164,15 +164,15 @@ def test_scenario_a9_chart_two_today_one_yesterday():
     assert [value for _, value in chart_bars(open_profile())] == [0, 0, 0, 0, 0, 1, 2]
 
 
-def test_highscore_table_is_the_same_as_on_the_tests_tab():
+def test_highscore_table_matches_your_best_on_the_tests_tab():
     seed_test_run("r1", correct=15, level="Easy")
     seed_test_run("r2", correct=9, level="Easy")
     seed_test_run("r3", correct=7, level="Medium")
     at = open_app()
-    on_tests_tab = highscore_table(at)
+    on_tests_tab = {level: tests_tab.your_best(at, "Multiplication", level) for level in LEVELS}
     tests_tab.go_to(at, "Profile")
     on_profile = highscore_table(at)
-    assert on_profile.equals(on_tests_tab)
+    assert {level: on_profile.loc["Multiplication", level] for level in LEVELS} == on_tests_tab
     assert on_profile.loc["Multiplication", "Easy"] == "15"  # cells are text, like "–"
 
 
