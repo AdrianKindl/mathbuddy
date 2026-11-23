@@ -11,8 +11,11 @@ from pathlib import Path
 import pytest
 from streamlit.testing.v1 import AppTest
 
+import activity_db
 import knowledge_db
 from knowledge import skip_task, start_round
+from conftest import TEST_USER
+from stats import Kind
 
 ROOT = Path(__file__).resolve().parent.parent
 APP = ROOT / "app.py"
@@ -83,6 +86,8 @@ def save_completed_trick_round(trick_id):
     knowledge_db.save_round(
         f"{trick_id}-done", practice_round, datetime(2026, 11, 21, 12, tzinfo=timezone.utc)
     )
+    activity_db.init_db()
+    activity_db.assign_owner(Kind.TRICKS, f"{trick_id}-done", TEST_USER.id)  # spec 014
 
 
 # --- Toggle and overview (TA1) ---

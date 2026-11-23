@@ -152,7 +152,7 @@ def render_category() -> None:
     st.header(category.name, anchor=False)
     st.caption(category.subtitle)
 
-    done = practised(knowledge_db.list_rounds())
+    done = practised(knowledge_db.list_rounds_for(state.user.id))  # spec 014
     list_rows(
         [
             (f"{trick.name} · {trick.difficulty}{' ✓' if trick.id in done else ''}",

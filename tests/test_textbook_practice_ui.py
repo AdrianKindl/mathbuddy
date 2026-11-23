@@ -13,11 +13,14 @@ import pytest
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.testing.v1 import AppTest
 
+import activity_db
 import knowledge_db
 import textbook_db
 from knowledge import skip_task as skip_trick
 from knowledge import start_round as start_trick_round
 from textbook import AnswerType, current_task
+from conftest import TEST_USER
+from stats import Kind
 
 ROOT = Path(__file__).resolve().parent.parent
 APP = ROOT / "app.py"
@@ -153,6 +156,8 @@ def save_completed_trick_round(trick_id):
         practice_round, _ = skip_trick(practice_round)
     knowledge_db.save_round(f"{trick_id}-done", practice_round,
                             datetime(2026, 11, 21, 12, tzinfo=timezone.utc))  # fmt: skip
+    activity_db.init_db()
+    activity_db.assign_owner(Kind.TRICKS, f"{trick_id}-done", TEST_USER.id)  # spec 014
 
 
 def case_interview_ticks(at):

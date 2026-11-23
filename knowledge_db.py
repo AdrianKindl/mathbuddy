@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 
 import db
 from knowledge import Round, SavedRound, Status
+from stats import Kind
 
 
 def init_db() -> None:
@@ -48,12 +49,31 @@ def save_round(round_id: str, practice_round: Round, finished_at: datetime) -> N
         )
 
 
+COLUMNS = "t.id, t.trick_id, t.level, t.finished_at, t.correct"
+
+
 def list_rounds() -> list[SavedRound]:
+    """Completed rounds of all players, oldest first."""
+    return _read(f"SELECT {COLUMNS} FROM practice_rounds t", ())
+
+
+def list_rounds_for(user_id: str) -> list[SavedRound]:
+    """Completed rounds of one player, oldest first (spec 014).
+
+    The owner is in `activity_owners` (spec 012); rounds without an owner
+    belong to nobody.
+    """
+    return _read(
+        f"SELECT {COLUMNS} FROM practice_rounds t "
+        "JOIN activity_owners o ON o.activity_id = t.id AND o.kind = ? "
+        "WHERE o.user_id = ?",
+        (Kind.TRICKS.value, user_id),
+    )
+
+
+def _read(query: str, parameters: tuple) -> list[SavedRound]:
     with closing(db.connect()) as connection:
-        rows = connection.execute(
-            "SELECT id, trick_id, level, finished_at, correct "
-            "FROM practice_rounds ORDER BY finished_at, id"
-        ).fetchall()
+        rows = connection.execute(query + " ORDER BY t.finished_at, t.id", parameters).fetchall()
     return [
         SavedRound(
             id=row[0],

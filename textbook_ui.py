@@ -156,7 +156,7 @@ def render_category() -> None:
     category = get_category(state.tb_category)
     back_button("tb_back", _go, ("overview",))
     st.header(category.name, anchor=False)
-    done = practised(textbook_db.list_rounds())
+    done = practised(textbook_db.list_rounds_for(state.user.id))  # spec 014
     list_rows(
         [
             (f"{article.name} · {article.difficulty}{' ✓' if article.id in done else ''}",
