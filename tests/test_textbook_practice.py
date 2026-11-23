@@ -1,6 +1,6 @@
 """Textbook practice rules in textbook.py, stage 2 (T R6–T R10, TA8–TA10).
 
-The ranges come from the "Practice catalogue" of docs/textbook-brief new.md, with
+The ranges come from the "Practice catalogue" of docs/textbook-brief.md, with
 the decisions in specs/010-textbook.md (stage 2). They are written out here on
 purpose, so a wrong range in textbook.py cannot pass by checking itself.
 """

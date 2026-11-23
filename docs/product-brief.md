@@ -3,8 +3,10 @@
 > Train mental arithmetic with short, varied, measurable practice.
 
 **5 sections · 4 difficulty levels · 60-second tests**
-Group project · Introduction to Programming · Version 1.3 · 23 November 2026
+Group project · Introduction to Programming · Version 1.4 · 23 November 2026
 
+> **Changes in 1.4 (spec 019, README):** Number Chain, added as a fifth game in spec 002e, is now described under R4 – Games and listed in the product overview.
+>
 > **Changes in 1.3 (spec 015, Tests tab):** the Tests tab shows only the player's best score for the selected test type and level; the full highscore table is on the Profile (MB06).
 >
 > **Changes in 1.2 (spec 013, leaderboard):** an all-time leaderboard per test type and level (new MB06, new MB R10, adjusted MB R7, MB R9 and scope boundaries, new A11–A13).
@@ -28,7 +30,7 @@ The app has five sections, reached through a main navigation:
 | **Profile** | Account, statistics, streak, 7-day activity | R1 |
 | **Trainer** | Configurable practice by operation, number type and special topic | R2–R3 |
 | **Knowledge** | Tips and tricks with practice examples | R3 |
-| **Games** | Mini Sudoku, Sudoku, Number Hunt, Magic Square | R4 |
+| **Games** | Mini Sudoku, Sudoku, Number Hunt, Magic Square, Number Chain | R4 |
 
 ## First release (R1)
 Deliver the **Tests** section and the **Profile** section. The other three sections appear in the navigation and show "Coming soon".
@@ -192,6 +194,7 @@ All games have the four levels and 3 lives. A wrong entry costs a life; losing a
 - **Sudoku:** fill a 9×9 grid with 1–9 so that each digit appears once in every row, column and 3×3 box. No time pressure.
 - **Number Hunt:** combine the given numbers with +, −, ×, ÷ to reach the target number. Each step replaces two numbers with their result; the game is won when the last remaining number equals the target. Every result must be a whole number greater than zero; multiplying or dividing by 1 is not allowed. Undo and Reset each cost a life.
 - **Magic Square:** fill the grid so that every row, column and both diagonals add up to the target sum. The keypad only offers the numbers needed for the puzzle.
+- **Number Chain:** a start number and then steps such as "+ 8", "× 3" or "÷ 6" are shown one after the other for a few seconds each; the user keeps the running result in their head and types the final result. A correct result adds a point and makes the next chain one step longer; a wrong result costs a life and shows the right result. Every intermediate result is a whole number greater than zero, and a step never repeats or undoes the step before.
 
 ---
 

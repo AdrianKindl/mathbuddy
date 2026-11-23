@@ -1,6 +1,6 @@
 """The Textbook catalogue: categories, articles, examples, tables, related tricks.
 
-Supplied content as data (T R1), with the texts of "docs/textbook-brief new.md"
+Supplied content as data (T R1), with the texts of "docs/textbook-brief.md"
 and the decisions in specs/010-textbook.md. No Streamlit and no SQL. Nothing of
 this is stored in the database.
 
