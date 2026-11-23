@@ -163,6 +163,19 @@
   }
 }
 
+/* Wider than that, Streamlit's toolbar is shown and stretches across the
+   whole header (z-index 999990, pointer-events: auto): it lay on top of the
+   logo and the account button, so clicks on them did nothing (spec 021).
+   The top bar sits just above it. The account panel (z-index 999991) comes
+   earlier in the page and at these widths pushes the page aside instead of
+   covering it, so the two never overlap. */
+@media not all and (max-width: 1100px) {
+  .mb-topbar {
+    position: relative;
+    z-index: 999991;
+  }
+}
+
 /* The page scrolls behind the glass navigation; keep scrollbars slim. */
 .stApp * {
   scrollbar-width: thin;
