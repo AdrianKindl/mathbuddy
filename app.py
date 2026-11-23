@@ -508,6 +508,9 @@ def render_select() -> None:
     st.button("Start", key="start", type="primary", on_click=on_start)
 
     render_highscores()
+    # Only the Tests tab has a leaderboard, and only here are the selected
+    # operation and level known (spec 014). The Profile shows the highscores alone.
+    render_leaderboard(operation, level)
 
 
 def render_highscores() -> None:
@@ -523,7 +526,6 @@ def render_highscores() -> None:
             index=list(TEST_TYPES),
         )
     )
-    render_leaderboard(operation, level)
 
 
 def leaderboard_cells(row: Row) -> list[str]:
