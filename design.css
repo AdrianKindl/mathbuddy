@@ -1539,6 +1539,23 @@
     border-width: 1px 0 0;
     box-shadow: 0 -10px 30px -14px rgba(26, 22, 51, 0.3);
   }
+  /* On Streamlit Cloud two round buttons sit in the bottom right corner, outside
+     the app. There the tab bar floats as a pill just above them. */
+  :root[data-mb-embedded] .st-key-nav {
+    left: 0.6rem;
+    right: 0.6rem;
+    bottom: 3.3rem;
+    width: auto !important;
+  }
+  :root[data-mb-embedded] .st-key-nav [data-testid="stRadioGroup"] {
+    padding: 6px;
+    border-radius: 22px;
+    border-width: 1px;
+    box-shadow: 0 14px 34px -12px rgba(26, 22, 51, 0.45);
+  }
+  :root[data-mb-embedded] [data-testid="stMainBlockContainer"] {
+    padding-bottom: calc(var(--mb-nav-h) + 5.6rem) !important;
+  }
   .st-key-nav [data-testid="stRadioGroup"] > div {
     flex: 1 1 0;
     min-width: 0;
