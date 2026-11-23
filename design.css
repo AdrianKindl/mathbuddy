@@ -1866,3 +1866,68 @@ body,
 .stApp :is(button:disabled, button:disabled *, input:disabled) {
   cursor: not-allowed;
 }
+
+/* ---------- 20. Easter egg: the logo hiccups out an equation ---------- */
+
+/* design.js adds data-mb-hiccup to the logo for a quick squash and bounce,
+   and a .mb-hiccup equation that floats up, drifts sideways and fades out.
+   Calm mode (section 18) already stops the bounce of the logo. */
+@keyframes mb-hiccup {
+  0% { transform: rotate(-6deg) scale(1); }
+  22% { transform: rotate(-6deg) translateY(3px) scale(1.14, 0.8); }
+  48% { transform: rotate(-2deg) translateY(-5px) scale(0.92, 1.1); }
+  72% { transform: rotate(-7deg) translateY(1px) scale(1.04, 0.96); }
+  100% { transform: rotate(-6deg) scale(1); }
+}
+@keyframes mb-hiccup-float {
+  0% { opacity: 0; transform: translate(0, 4px) scale(0.6); }
+  14% { opacity: 1; transform: translate(calc(var(--mb-drift) * 0.15), -6px) scale(1.08); }
+  65% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--mb-drift), var(--mb-rise)) scale(1); }
+}
+@keyframes mb-hiccup-fade {
+  0%, 100% { opacity: 0; }
+  20%, 70% { opacity: 1; }
+}
+
+.mb-logo[data-mb-hiccup] {
+  animation: mb-hiccup 0.45s var(--mb-ease);
+}
+
+.mb-hiccup {
+  --mb-drift: 24px;
+  --mb-rise: -48px;
+  position: fixed;
+  z-index: 1000002;
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+  font-family: var(--mb-display);
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #f4f0ff;
+  text-shadow: 0 0 4px rgba(108, 71, 255, 0.95), 0 0 12px rgba(160, 75, 255, 0.6);
+  /* The logo sits near the top, so the equation rises over the wordmark:
+     a soft glass backing keeps it readable. */
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(28, 16, 72, 0.72);
+  border: 1px solid rgba(160, 130, 255, 0.45);
+  box-shadow: 0 0 16px rgba(108, 71, 255, 0.55);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  animation: mb-hiccup-float 1.4s var(--mb-ease) forwards;
+}
+[data-mb-theme="light"] .mb-hiccup {
+  background: rgba(108, 71, 255, 0.88);
+  border-color: rgba(255, 255, 255, 0.5);
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mb-hiccup {
+    transform: translateY(-8px);
+    animation: mb-hiccup-fade 1.4s linear forwards;
+  }
+}
