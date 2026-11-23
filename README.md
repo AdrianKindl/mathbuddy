@@ -164,7 +164,7 @@ All team members used an AI coding assistant (Claude Code) as part of the course
 ## Team and contributions
 
 | Name | GitHub | Main areas |
-|---|---|---|---|
+|---|---|---|
 | Adrian Kindl | [AdrianKindl](https://github.com/AdrianKindl) | BRD (product brief), project setup and team rules, Tests (task rules, runs, Tests screen), Knowledge (Tricks, Textbook), leaderboard, deployment; fixes for the task flicker and late submits, custom cursor |
 | Floria Bade | [Floria187](https://github.com/Floria187) | Online accounts and PostgreSQL storage, profile and statistics, "Your best" on the Tests tab |
 | Celina Dzaak | [Celina695](https://github.com/Celina695) | Games: Mini Sudoku, Sudoku, Number Hunt, Magic Square and Number Chain (built with Claude Code), End game and Try again buttons, tile overview |
