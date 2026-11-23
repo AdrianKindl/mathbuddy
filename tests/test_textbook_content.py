@@ -12,7 +12,7 @@ from textbook_content import CATEGORIES, get_article
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# From "docs/textbook-brief new.md", copied on purpose rather than imported.
+# From "docs/textbook-brief.md", copied on purpose rather than imported.
 CATALOGUE = {
     "Basics": [
         ("B1", "Order of operations", "Medium"),

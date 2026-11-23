@@ -2,7 +2,7 @@
 
 No Streamlit, no SQL, no clock. Randomness only comes from the random.Random
 passed in. The practice ranges follow the "Practice catalogue" of
-"docs/textbook-brief new.md" with the decisions in specs/010-textbook.md.
+"docs/textbook-brief.md" with the decisions in specs/010-textbook.md.
 
 Every task carries its `template`: the calculation over its `values`. The
 answer of a typed task is that calculation, worked out exactly with fractions.

@@ -1,6 +1,6 @@
 # 010 – Textbook: background articles in the Knowledge tab
 
-Source: `docs/textbook-brief new.md` (Textbook mode feature brief, version 0.1),
+Source: `docs/textbook-brief.md` (Textbook mode feature brief, version 0.1),
 rules T R1–T R10 and scenarios TA1–TA12. Builds on spec 009 (Knowledge, Tricks mode).
 
 This feature is built in **two stages**:
@@ -86,9 +86,9 @@ at most half a unit in the last shown digit of the right side
 - Its open questions are listed below and must be settled in the stage 2 spec update.
 
 ## Decisions on unclear points (stage 1, to confirm)
-1. **Brief file name:** the brief is `docs/textbook-brief new.md` (with a
-   space and "new"). It is referred to as `docs/textbook-brief.md`; renaming
-   it before committing is suggested.
+1. **Brief file name:** the brief was supplied with a space and "new" in
+   its file name and has since been renamed to `docs/textbook-brief.md`
+   (spec 019).
 2. **F1 has no example card**, only the table. Examples are optional for it.
 3. **Table subtitles** are not given for F1 and C3. Written: F1 "Fraction ·
    Decimal · Percent", C3 "Margin and the matching markup". B2 uses "Signs of
