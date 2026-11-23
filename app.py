@@ -289,18 +289,40 @@ def on_cancel_countdown() -> None:
     clear_run()
 
 
+def test_is_running() -> bool:
+    """False once the test has ended (time up, Abort): its run is saved and cleared.
+
+    A click that was already on its way at that moment still reaches the old
+    button's callback on the next rerun (spec 018). It must then do nothing.
+    """
+    run = state.get("run")
+    return (
+        state.get("phase") == "running"
+        and run is not None
+        and run.status == Status.RUNNING
+        and state.get("current_task") is not None
+    )
+
+
 def on_submit() -> None:
     now = utc_now()
+    if not test_is_running():
+        return
     apply_outcome(*submit_answer(state.run, state.current_task, state.answer, now))
 
 
 def on_skip() -> None:
     now = utc_now()
+    if not test_is_running():
+        return
     apply_outcome(*skip_task(state.run, now))
 
 
 def on_abort() -> None:
-    leave_run(utc_now())
+    now = utc_now()
+    if not test_is_running():
+        return
+    leave_run(now)
 
 
 def on_back() -> None:
