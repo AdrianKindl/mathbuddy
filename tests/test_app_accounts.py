@@ -94,8 +94,12 @@ def finish_a_run(at, correct):
 
 
 def multiplication_easy_highscore(at):
-    table = at.table[0].value
-    return str(table.loc["Multiplication", "Easy"])
+    """The Tests tab's "Your best" for Multiplication Easy (spec 015)."""
+    at.button_group(key="test_type").set_value("Multiplication")
+    at.button_group(key="level").set_value("Easy")
+    at.run()
+    assert not at.exception
+    return str({metric.label: metric.value for metric in at.metric}["Your best"])
 
 
 # --- Sign in screen ---

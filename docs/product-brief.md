@@ -3,8 +3,10 @@
 > Train mental arithmetic with short, varied, measurable practice.
 
 **5 sections · 4 difficulty levels · 60-second tests**
-Group project · Introduction to Programming · Version 1.2 · 22 November 2026
+Group project · Introduction to Programming · Version 1.3 · 23 November 2026
 
+> **Changes in 1.3 (spec 015, Tests tab):** the Tests tab shows only the player's best score for the selected test type and level; the full highscore table is on the Profile (MB06).
+>
 > **Changes in 1.2 (spec 013, leaderboard):** an all-time leaderboard per test type and level (new MB06, new MB R10, adjusted MB R7, MB R9 and scope boundaries, new A11–A13).
 > **Changes in 1.2 (spec 012, profile):** MB R8 counts all completed activities (Tests, Trainer, Knowledge practice, Games) for the streak and the 7-day chart; tasks and accuracy include Tests, Trainer and Knowledge practice.
 >
@@ -56,7 +58,7 @@ When the time is up, show the score (correct answers), the number of wrong and s
 Let a user create an account with a username, an email address and a password (typed twice), and sign in with their username and password from any device. A user must be signed in to use the app; without a user only the sign in screen is shown. A signed in user can sign out. The profile shows the username, total tasks completed, accuracy, longest streak, the highscore per test type and level, and a bar chart of completed activities for each of the last 7 days (x-axis: weekdays, bars: completed activities per day).
 
 ### MB06 – See the leaderboard
-On the Tests screen, below the highscores, show the all-time leaderboard for the test type and level currently selected; it changes when the selection changes. It lists the top 15 players with rank, username and highscore, and shows the signed-in user where they stand (MB R10).
+On the Tests screen, below the player's best score for the selected test type and level ("Your best", MB R6), show the all-time leaderboard for the test type and level currently selected; it changes when the selection changes. It lists the top 15 players with rank, username and highscore, and shows the signed-in user where they stand (MB R10). The full highscore table is shown on the Profile (MB05), not on the Tests screen.
 
 ---
 
